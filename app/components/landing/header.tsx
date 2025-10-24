@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { SignedIn, SignedOut, SignInButton, SignOutButton } from "@clerk/nextjs";
 
 export const Header = () => {
 
@@ -40,9 +41,20 @@ export const Header = () => {
                             className="h-10 w-64 pl-9"
                         />
                     </div>
-                    <Button variant="default" className="cursor-pointer bg-teal-700 hover:bg-teal-800">
-                        Sign In
-                    </Button>
+                    <SignedOut>
+                        <SignInButton>
+                            <Button variant="default" className="cursor-pointer bg-teal-700 hover:bg-teal-800">
+                                Sign In
+                            </Button>
+                        </SignInButton>
+                    </SignedOut>
+                    <SignedIn>
+                        <SignOutButton>
+                            <Button variant="default" className="cursor-pointer bg-teal-700 hover:bg-teal-800">
+                                Sign Out
+                            </Button>
+                        </SignOutButton>
+                    </SignedIn>
                 </div>
             </nav>
         </header>
