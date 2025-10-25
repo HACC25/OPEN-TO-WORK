@@ -48,7 +48,7 @@ export const PublicReports = () => {
                             className="pl-10 h-11 bg-background border-border"
                         />
                     </div>
-                    <Button size="lg" className="bg-teal-700 hover:bg-teal-800 text-white cursor-pointer">
+                    <Button size="lg" className="cursor-pointer">
                         Search
                     </Button>
                 </div>
@@ -64,11 +64,11 @@ export const PublicReports = () => {
                                 className="block"
                             >
                                 <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors group">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-700/10 shrink-0">
-                                        <FileText className="h-5 w-5 text-teal-700" />
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                                        <FileText className="h-5 w-5 text-primary" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h4 className="font-medium text-foreground group-hover:text-teal-700 transition-colors">
+                                        <h4 className="font-medium text-foreground group-hover:text-primary transition-colors">
                                             {report.sponsoringAgency} - {report.projectName}
                                         </h4>
                                         <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
@@ -76,7 +76,7 @@ export const PublicReports = () => {
                                                 <Calendar className="h-3.5 w-3.5" />
                                                 <span>{report.date}</span>
                                             </div>
-                                            <Badge variant="secondary" className="bg-green-700/10 text-green-700 border-0">
+                                            <Badge>
                                                 Approved
                                             </Badge>
                                         </div>
@@ -90,7 +90,7 @@ export const PublicReports = () => {
                 {/* View All Button */}
                 <div className="text-center">
                     <Link href="/public/catalog">
-                        <Button size="lg" className="bg-teal-700 hover:bg-teal-800 text-white cursor-pointer">
+                        <Button size="lg" className="cursor-pointer">
                             View All Reports
                             <ArrowRight className="h-4 w-4" />
                         </Button>

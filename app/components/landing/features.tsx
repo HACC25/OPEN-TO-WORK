@@ -48,7 +48,7 @@ export const Features = () => {
                     <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
                             <feature.icon />
-                            <span className="uppercase font-bold">{feature.title}</span>
+                            <span className="uppercase font-bold">{feature.label}</span>
                         </div>
                         <h2 className="text-4xl font-bold">
                             {feature.title}

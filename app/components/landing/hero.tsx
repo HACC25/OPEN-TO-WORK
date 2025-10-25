@@ -19,10 +19,10 @@ export const Hero = () => {
                 </p>
                 <div className="justify-center">
                     <Button
-                        className="px-6 py-5 bg-teal-700 hover:bg-teal-800"
+                        className="px-6 py-5 cursor-pointer"
                         asChild
                     >
-                        <Link href="/login">Get Started</Link>
+                        <Link href="/dashboard">Get Started</Link>
                     </Button>
                 </div>
                 <div className="flex justify-center mt-8 mb-12">
