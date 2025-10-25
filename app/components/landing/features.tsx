@@ -38,8 +38,8 @@ const features = [
 export const Features = () => {
 
     return (
-        <section className="bg-cyan-800/20 py-20 flex flex-col items-center justify-center gap-36">
-            <h1 className="text-4xl font-bold max-w-md text-cyan-800 text-center">
+        <section className="bg-cyan-800/20 py-20 flex flex-col items-center justify-center gap-32">
+            <h1 className="text-5xl font-bold max-w-2xl text-cyan-800 text-center">
                 Built for transparency, efficiency, and public trust.
             </h1>
 
