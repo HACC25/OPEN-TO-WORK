@@ -10,7 +10,7 @@ export const Hero = () => {
             <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute bottom-0 left-0 right-0 w-full h-0 border-l-[50vw] border-l-transparent border-r-[50vw] border-r-transparent border-b-300 border-b-cyan-800 opacity-20"></div>
             </div>
-            <div className="mx-auto max-w-3xl text-center relative z-10">
+            <div className="mx-auto max-w-4xl text-center relative z-10">
                 <h1 className="mt-16 mb-4 text-6xl font-bold text-cyan-800 tracking-tight">
                     One place to review and publish reports <span className="italic font-normal"> &mdash; in real time.</span>
                 </h1>
