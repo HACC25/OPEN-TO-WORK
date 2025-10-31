@@ -44,14 +44,14 @@ export const Header = () => {
                     </div>
                     <Unauthenticated>
                         <SignInButton>
-                            <Button variant="default" className="cursor-pointer bg-teal-700 hover:bg-teal-800">
+                            <Button variant="default" className="cursor-pointer">
                                 Sign In
                             </Button>
                         </SignInButton>
                     </Unauthenticated>
                     <Authenticated>
                         <SignOutButton>
-                            <Button variant="default" className="cursor-pointer bg-teal-700 hover:bg-teal-800">
+                            <Button variant="default" className="cursor-pointer">
                                 Sign Out
                             </Button>
                         </SignOutButton>

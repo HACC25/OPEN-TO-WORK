@@ -33,11 +33,11 @@ export const Workflow = () => {
                 {steps.map((step, index) => (
                     <div key={index} className="relative">
                         <Card className="bg-card p-8 shadow-sm transition-all hover:shadow-md animate-fade-in">
-                            <div className={`inline-flex h-14 w-14 items-center justify-center rounded-xl bg-teal-700/10 text-cyan-800`}>
+                            <div className={`inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary`}>
                                 <step.icon className="h-7 w-7" />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <h3 className="text-xl font-semibold text-card-foreground">{step.title}</h3>
+                                <h3 className="text-xl font-semibold">{step.title}</h3>
                                 <p className="text-muted-foreground">{step.description}</p>
                             </div>
                         </Card>
