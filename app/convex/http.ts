@@ -45,7 +45,6 @@ http.route({
                 })
                 return new Response('User deleted', { status: 200 })
             default:
-                console.log('Ignored Clerk webhook event:', type)
                 return new Response('Ignored Clerk webhook event', { status: 400 })
         }
     }),

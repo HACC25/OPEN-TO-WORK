@@ -10,7 +10,7 @@ type BreadcrumbItem = {
 
 export function AppSidebarContent({ children, breadcrumbItems }: { children: React.ReactNode, breadcrumbItems: BreadcrumbItem[] }) {
     return (
-        <div className='z-1 mx-auto flex size-full max-w-20xl flex-1 flex-col px-4 py-6 sm:px-6'>
+        <div className='z-1 mx-auto flex size-full max-w-20xl flex-1 flex-col px-4 py-6 sm:px-6 min-w-0'>
             <header className='bg-card mb-6 flex items-center rounded-xl px-6 py-3.5 gap-2'>
                 <SidebarTrigger className='cursor-pointer [&_svg]:size-5!' />
                 <Separator

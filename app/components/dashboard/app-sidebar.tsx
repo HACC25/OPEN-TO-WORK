@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ComponentType } from "react"
+import { ComponentType, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -10,12 +10,13 @@ import {
     ChevronRightIcon,
     HomeIcon,
     PackageIcon,
-    LogOutIcon,
     Plus,
     ChartArea,
+    KanbanSquare,
+    User,
+    ChevronsUpDown,
 } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
     Sidebar,
@@ -33,8 +34,7 @@ import {
     SidebarMenuSubItem,
     useSidebar,
 } from "@/components/ui/sidebar"
-import { SignOutButton, useUser } from "@clerk/nextjs"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { UserButton, useUser } from "@clerk/nextjs"
 
 type MenuSubItem = {
     label: string
@@ -55,6 +55,8 @@ const pagesItems: MenuItem[] = [
     { icon: Plus, label: "New Project", highlighted: true, href: "/dashboard/new" },
     { icon: HomeIcon, label: "Home", href: "/" },
     { icon: ChartArea, label: "Dashboard", href: "/dashboard" },
+    { icon: KanbanSquare, label: "Project Management", href: "/dashboard/projects" },
+    { icon: User, label: "User Management", href: "/dashboard/users" },
     {
         icon: PackageIcon,
         label: "Projects",
@@ -75,8 +77,9 @@ const pagesItems: MenuItem[] = [
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-    const { open, isMobile } = useSidebar()
+    const { open } = useSidebar()
     const { user } = useUser()
+    const userButtonRef = useRef<HTMLButtonElement>(null)
 
     return (
         <Sidebar
@@ -154,34 +157,42 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarFooter>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton size="lg" className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                                    <Avatar className="h-8 w-8 rounded-lg">
-                                        <AvatarImage src={user?.imageUrl} alt={(user?.firstName ?? "") + " " + (user?.lastName ?? "")} />
-                                        <AvatarFallback className="rounded-lg">{user?.fullName?.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="grid flex-1 text-left text-sm leading-tight">
-                                        <span className="truncate font-medium">{user?.firstName} {user?.lastName}</span>
-                                        <span className="truncate text-xs">{user?.emailAddresses?.[0]?.emailAddress}</span>
-                                    </div>
-                                    <ChevronRightIcon className="ml-auto size-4 rotate-90" />
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                                side={isMobile ? "bottom" : "right"}
-                                align="end"
-                                sideOffset={4}
-                            >
-                                <SignOutButton>
-                                    <DropdownMenuItem className="cursor-pointer">
-                                        <LogOutIcon className="mr-2 h-4 w-4" />
-                                        <span>Log out</span>
-                                    </DropdownMenuItem>
-                                </SignOutButton>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <SidebarMenuButton
+                            ref={userButtonRef}
+                            size="lg"
+                            className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                            onClick={(e) => {
+                                // Find the UserButton's trigger button and click it when clicking on the parent div
+                                if (userButtonRef.current) {
+                                    // Clerk's UserButton typically renders a button element
+                                    // Try to find it using various selectors
+                                    const clerkButton = userButtonRef.current.querySelector('[data-clerk-element="userButton"]') as HTMLElement;
+                                    const fallbackButton = userButtonRef.current.querySelector('button') as HTMLButtonElement;
+                                    const userButtonTrigger = clerkButton?.querySelector('button') as HTMLButtonElement ||
+                                        (clerkButton instanceof HTMLButtonElement ? clerkButton : null) ||
+                                        fallbackButton;
+
+                                    if (userButtonTrigger &&
+                                        userButtonTrigger !== e.target &&
+                                        !userButtonTrigger.contains(e.target as Node)) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        userButtonTrigger.click();
+                                    }
+                                }
+                            }}
+                        >
+                            <UserButton appearance={{
+                                elements: {
+                                    avatarBox: "h-9 w-9 rounded-lg",
+                                },
+                            }} />
+                            <div className="grid flex-1 text-left text-sm leading-tight">
+                                <span className="truncate font-medium">{user?.firstName} {user?.lastName}</span>
+                                <span className="truncate text-xs">{user?.emailAddresses?.[0]?.emailAddress}</span>
+                            </div>
+                            <ChevronsUpDown className="ml-auto size-4" />
+                        </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarFooter>

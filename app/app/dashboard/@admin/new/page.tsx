@@ -52,7 +52,7 @@ const FormSchema = z.object({
         .min(0, { message: "Date must be positive" }),
     currentStatus: z.enum(["On Track", "At Risk", "Critical"]),
     active: z.boolean(),
-    vendorName: z.string().min(1, { message: "Vendor name is required" }),
+    vendorName: z.string().trim().optional(),
 });
 
 export default function Page() {
@@ -73,8 +73,8 @@ export default function Page() {
         }
     });
 
-    const createProject = useMutation(api.projects.createProject);
     const router = useRouter();
+    const createProject = useMutation(api.projects.createProject);
 
     async function onSubmit() {
         const projectId = await createProject({
@@ -88,7 +88,7 @@ export default function Page() {
             currentProjectedEndDate: Number(form.getValues('currentProjectedEndDate')),
             currentStatus: form.getValues('currentStatus'),
             active: form.getValues('active'),
-            vendorName: form.getValues('vendorName'),
+            vendorName: form.getValues('vendorName') ?? undefined,
         });
         if (projectId) {
             toast.success('Project saved successfully.');

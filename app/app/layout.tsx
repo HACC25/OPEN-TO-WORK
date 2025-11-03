@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
+import { ClerkProvider, GoogleOneTap } from "@clerk/nextjs";
 import ConvexClientProvider from "@/providers/convex-client-provider";
+import { shadcn } from '@clerk/themes';
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -29,7 +30,11 @@ export default function RootLayout({
             <body
                 className={`${geistSans.variable} ${geistMono.variable} antialiased`}
             >
-                <ClerkProvider>
+                <ClerkProvider
+                    appearance={{
+                        baseTheme: shadcn,
+                    }}
+                >
                     <ConvexClientProvider>
                         {children}
                     </ConvexClientProvider>

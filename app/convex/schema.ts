@@ -9,11 +9,19 @@ export default defineSchema({
         imageUrl: v.string(),
         role: v.union(v.literal('admin'), v.literal('user'), v.literal('vendor')),
         isActive: v.boolean(),
-        createdAt: v.number(),
         updatedAt: v.number(),
     })
-    .index("by_clerk_id", ["clerkId"])
-    .index("by_email", ["email"]),
+        .index("by_clerk_id", ["clerkId"])
+        .index("by_email", ["email"])
+        .index("by_role", ["role"]),
+
+    projectMembers: defineTable({
+        userId: v.id('users'),
+        projectId: v.id('projects'),
+    })
+        .index("by_user_id", ["userId"])
+        .index("by_project_id", ["projectId"])
+        .index("by_user_project_id", ["userId", "projectId"]),
 
     projects: defineTable({
         projectName: v.string(),
@@ -26,8 +34,17 @@ export default defineSchema({
         currentProjectedEndDate: v.number(),
         currentStatus: v.union(v.literal('On Track'), v.literal('At Risk'), v.literal('Critical')),
         active: v.boolean(),
-        vendorName: v.string(),
-        createdAt: v.number(),
+        vendorName: v.optional(v.string()),
+        updatedAt: v.number(),
+    }),
+
+    monthlyReports: defineTable({
+        projectId: v.id('projects'),
+        month: v.number(),
+        year: v.number(),
+        currentStatus: v.union(v.literal('On Track'), v.literal('Minor Issues'), v.literal('Critical')),
+        summary: v.string(),
+        submittedBy: v.id('users'),
         updatedAt: v.number(),
     }),
 });

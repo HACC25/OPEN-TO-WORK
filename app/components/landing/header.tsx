@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { SignInButton, SignOutButton } from "@clerk/nextjs";
-import { Authenticated, Unauthenticated } from "convex/react";
+import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
 export const Header = () => {
 
@@ -42,20 +41,20 @@ export const Header = () => {
                             className="h-10 w-64 pl-9"
                         />
                     </div>
-                    <Unauthenticated>
+                    <SignedOut>
                         <SignInButton>
                             <Button variant="default" className="cursor-pointer">
                                 Sign In
                             </Button>
                         </SignInButton>
-                    </Unauthenticated>
-                    <Authenticated>
-                        <SignOutButton>
-                            <Button variant="default" className="cursor-pointer">
-                                Sign Out
-                            </Button>
-                        </SignOutButton>
-                    </Authenticated>
+                    </SignedOut>
+                    <SignedIn>
+                        <UserButton appearance={{
+                            elements: {
+                                avatarBox: "h-9 w-9 rounded-lg",
+                            },
+                        }} />
+                    </SignedIn>
                 </div>
             </nav>
         </header>
