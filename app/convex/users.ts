@@ -19,7 +19,7 @@ export const createUser = internalMutation({
                 clerkId: args.clerkId,
                 name: args.name,
                 imageUrl: args.imageUrl,
-                role: 'user',
+                role: 'vendor',
                 isActive: true,
                 updatedAt: Date.now(),
             })
@@ -29,7 +29,7 @@ export const createUser = internalMutation({
             email: primaryEmail,
             name: args.name,
             imageUrl: args.imageUrl,
-            role: 'user',
+            role: 'vendor',
             isActive: true,
             updatedAt: Date.now(),
         })
@@ -55,14 +55,13 @@ export const updateUser = internalMutation({
                 email: primaryEmail,
                 name: args.name,
                 imageUrl: args.imageUrl,
-                role: 'user',
+                role: 'vendor',
                 isActive: true,
                 updatedAt: Date.now(),
             })
         }
         return ctx.db.patch(user._id, {
             email: primaryEmail,
-            role: 'user',
             name: args.name,
             imageUrl: args.imageUrl,
             updatedAt: Date.now(),

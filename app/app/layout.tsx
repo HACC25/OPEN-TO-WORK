@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ClerkProvider, GoogleOneTap } from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import ConvexClientProvider from "@/providers/convex-client-provider";
 import { shadcn } from '@clerk/themes';
 import { Geist, Geist_Mono } from "next/font/google";
