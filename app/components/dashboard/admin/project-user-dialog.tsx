@@ -4,7 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { FunctionReturnType } from 'convex/server'
 import { api } from '@/convex/_generated/api'
 import { useMutation, useQuery } from 'convex/react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -12,30 +11,22 @@ import { useState } from 'react'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Id } from '@/convex/_generated/dataModel'
 
-type Projects = FunctionReturnType<typeof api.projects.getProjects>
-type Project = Projects[number]
-type ProjectMember = Project['members'][number]
-
 export default function ProjectUserDialog({
-    project,
-    existingUsers,
-    getUsers,
-    addProjectMember,
-    removeProjectMember
+    projectId,
 }: {
-    project: Project
-    existingUsers: ProjectMember[]
-    getUsers: typeof api.users.getUsers
-    addProjectMember: typeof api.projects.addProjectMember
-    removeProjectMember: typeof api.projects.removeProjectMember
+    projectId: Id<'projects'>
 }) {
     const [dialogOpen, setDialogOpen] = useState(false)
     const [popoverOpen, setPopoverOpen] = useState(false)
-    const vendors = useQuery(getUsers, dialogOpen ? { searchString: '', role: 'vendor' } : "skip") || [];
+
+    const projectMembers = useQuery(api.projects.getProjectMembers, dialogOpen ? { projectId: projectId } : "skip") || [];
+    const vendors = useQuery(api.users.getUsers, dialogOpen ? { searchString: '', excludeRole: 'user' } : "skip") || [];
+    const addProjectMemberMutation = useMutation(api.projects.addProjectMember);
+    const removeProjectMemberMutation = useMutation(api.projects.removeProjectMember);
+
     const [selectedVendorId, setSelectedVendorId] = useState<Id<'users'> | null>(null)
     const selectedVendor = vendors.find(vendor => vendor._id === selectedVendorId) || null;
-    const addProjectMemberMutation = useMutation(addProjectMember);
-    const removeProjectMemberMutation = useMutation(removeProjectMember);
+    
     return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -104,14 +95,14 @@ export default function ProjectUserDialog({
                             size='sm'
                             className='px-4 cursor-pointer'
                             disabled={!selectedVendorId}
-                            onClick={() => addProjectMemberMutation({ projectId: project._id, userId: selectedVendorId! })}
+                            onClick={() => addProjectMemberMutation({ projectId: projectId, userId: selectedVendorId! })}
                         >
                             Add User
                         </Button>
                     </div>
                 </div>
                 <div className='space-y-4'>
-                    {existingUsers.map((user, index) => (
+                    {projectMembers.map((user, index) => (
                         <div key={index} className='flex items-center justify-between'>
                             <div className='flex items-center gap-2'>
                                 <Avatar className='size-8'>
@@ -127,7 +118,7 @@ export default function ProjectUserDialog({
                                 size='sm'
                                 variant='destructive'
                                 className='cursor-pointer'
-                                onClick={() => removeProjectMemberMutation({ projectId: project._id, userId: user._id })}
+                                onClick={() => removeProjectMemberMutation({ projectId: projectId, userId: user._id })}
                             >
                                 <UserMinusIcon />
                                 Remove

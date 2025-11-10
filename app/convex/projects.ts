@@ -45,35 +45,48 @@ export const createProject = mutation({
 });
 
 export const getProjects = query({
-    handler: async (ctx, args) => {
+    handler: async (ctx) => {
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) {
-            throw new Error('User not authenticated');
+            return [];
         }
         const user = await ctx.db.query('users').withIndex('by_clerk_id', q => q.eq('clerkId', identity.subject)).first();
         if (!user) {
-            throw new Error('User not found in database');
+            return [];
         }
-        if (user.role !== 'admin') {
-            throw new Error('User is not authorized to view projects');
+        if (user.role === 'vendor') {
+            const projectMembers = await ctx.db.query("projectMembers").withIndex('by_user_id', q => q.eq('userId', user._id)).collect();
+            const projects = (await Promise.all(projectMembers.map(pm => ctx.db.get(pm.projectId)))).filter((project): project is NonNullable<typeof project> => project !== null);
+            return projects.sort((a, b) => b.updatedAt - a.updatedAt);
         }
         const projects = await ctx.db.query("projects").collect();
-        return await Promise.all(
-            projects.map(async (project) => {
-                const projectMembers = await ctx.db
-                    .query("projectMembers")
-                    .withIndex("by_project_id", q => q.eq("projectId", project._id))
-                    .collect();
+        return projects.sort((a, b) => b.updatedAt - a.updatedAt);
+    }
+});
 
-                const userIds = projectMembers.map(pm => pm.userId);
-                const members = (await Promise.all(userIds.map(userId => ctx.db.get(userId)))).filter((user): user is NonNullable<typeof user> => user !== null);
+export const getProjectMembers = query({
+    args: {
+        projectId: v.id('projects'),
+    },
+    handler: async (ctx, args) => {
+        const projectMembers = await ctx.db.query('projectMembers').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
+        return (await Promise.all(projectMembers.map(pm => ctx.db.get(pm.userId)))).filter((user): user is NonNullable<typeof user> => user !== null);
+    }
+});
 
-                return {
-                    ...project,
-                    members: members,
-                };
-            })
-        );
+export const getProjectReports = query({
+    args: {
+        projectId: v.id('projects'),
+    },
+    handler: async (ctx, args) => {
+        const reports = await ctx.db.query('reports').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
+        return await Promise.all(reports.map(async (report) => {
+            const findings = await ctx.db.query('findings').withIndex('by_report_id', q => q.eq('reportId', report._id)).collect();
+            return {
+                ...report,
+                findings,
+            };
+        }));
     }
 });
 

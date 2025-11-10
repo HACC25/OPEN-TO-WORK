@@ -97,7 +97,8 @@ export const isAdmin = query(async (ctx) => {
 export const getUsers = query({
     args: {
         searchString: v.string(),
-        role: v.optional(v.union(v.literal('admin'), v.literal('user'), v.literal('vendor')))
+        role: v.optional(v.union(v.literal('admin'), v.literal('user'), v.literal('vendor'))),
+        excludeRole: v.optional(v.union(v.literal('admin'), v.literal('user'), v.literal('vendor'))),
     },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -108,9 +109,6 @@ export const getUsers = query({
         if (!user) {
             throw new Error('User not found in database');
         }
-        if (user.role !== 'admin') {
-            throw new Error('User is not authorized to view users');
-        }
         const searchString = args.searchString.toLowerCase().trim();
         if (searchString === '') {
             if (args.role) {
@@ -119,6 +117,13 @@ export const getUsers = query({
                     .query('users')
                     .withIndex('by_role', q => q.eq('role', role))
                     .collect());
+            }
+            if (args.excludeRole) {
+                const excludeRole: 'admin' | 'user' | 'vendor' = args.excludeRole;
+                return (await ctx.db
+                    .query('users')
+                    .collect())
+                    .filter(user => user.role !== excludeRole);
             }
             return await ctx.db.query('users').collect();
         }
@@ -148,9 +153,6 @@ export const updateUserMetadata = mutation({
             .first();
         if (!user) {
             throw new Error('User not found in database');
-        }
-        if (user.role !== 'admin') {
-            throw new Error('User is not authorized to update user metadata');
         }
         return ctx.db.patch(args._id, {
             isActive: args.isActive,

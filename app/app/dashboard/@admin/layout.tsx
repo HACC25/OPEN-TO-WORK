@@ -18,7 +18,7 @@ export default function AdminLayout({
                     } as CSSProperties
                 }
             >
-                <AppSidebar />
+                <AppSidebar role='admin' />
                 {children}
             </SidebarProvider>
         </div>

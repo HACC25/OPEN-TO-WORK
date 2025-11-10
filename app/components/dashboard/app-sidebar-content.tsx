@@ -11,7 +11,7 @@ type BreadcrumbItem = {
 export function AppSidebarContent({ children, breadcrumbItems }: { children: React.ReactNode, breadcrumbItems: BreadcrumbItem[] }) {
     return (
         <div className='z-1 mx-auto flex size-full max-w-20xl flex-1 flex-col px-4 py-6 sm:px-6 min-w-0'>
-            <header className='bg-card mb-6 flex items-center rounded-xl px-6 py-3.5 gap-2'>
+            <header className='sticky shadow-xl bg-card top-6 z-10 mx-2 mb-6 flex items-center rounded-xl px-6 py-3.5 gap-2 backdrop-blur supports-backdrop-filter:bg-background/80'>
                 <SidebarTrigger className='cursor-pointer [&_svg]:size-5!' />
                 <Separator
                     orientation="vertical"
@@ -22,7 +22,7 @@ export function AppSidebarContent({ children, breadcrumbItems }: { children: Rea
                         {breadcrumbItems.map((item, idx) => (
                             <React.Fragment key={item.label}>
                                 <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href={item.href} className="text-sm font-medium">
+                                    <BreadcrumbLink href={item.href} className="text-foreground hover:text-primary transition-colors text-sm font-medium">
                                         {item.label}
                                     </BreadcrumbLink>
                                 </BreadcrumbItem>

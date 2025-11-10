@@ -1,12 +1,9 @@
 'use client'
 
 import { Fragment } from 'react'
-
-import { ArrowRight, ChevronDownIcon, ChevronUpIcon, ExternalLink } from 'lucide-react'
-
+import { ArrowRight, ChevronDownIcon, ChevronUpIcon, ExternalLink, DownloadIcon } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { flexRender, getCoreRowModel, getExpandedRowModel, useReactTable } from '@tanstack/react-table'
-
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -15,23 +12,18 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import ProjectUserDialog from './project-user-dialog'
 import { api } from '@/convex/_generated/api'
 import { FunctionReturnType } from 'convex/server'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { useQuery } from 'convex/react'
+import type { Id } from '@/convex/_generated/dataModel'
+import Link from 'next/link'
 
 
 type Projects = FunctionReturnType<typeof api.projects.getProjects>
 type Project = Projects[number]
+type Reports = FunctionReturnType<typeof api.projects.getProjectReports>
 
-export default function ProjectTable({
-    projects,
-    getUsers,
-    addProjectMember,
-    removeProjectMember
-}: {
-    projects: Project[] | undefined
-    getUsers: typeof api.users.getUsers
-    addProjectMember: typeof api.projects.addProjectMember
-    removeProjectMember: typeof api.projects.removeProjectMember
-}) {
+export default function ProjectTable() {
+    const projects = useQuery(api.projects.getProjects, {}) || [];
+
     const columns: ColumnDef<Project>[] = [
         {
             id: 'expander',
@@ -75,34 +67,6 @@ export default function ProjectTable({
             cell: ({ row }) => {
                 const value = row.original.vendorName as string | undefined
                 return <div>{value && value.trim() !== '' ? value : '-'}</div>
-            }
-        },
-        {
-            header: 'Associated Users',
-            accessorKey: 'vendorUsers',
-            cell: ({ row }) => {
-                const members = row.original.members || []
-                if (members.length === 0) {
-                    return <div>-</div>
-                }
-                const maxVisible = 5
-                const visibleMembers = members.slice(0, maxVisible)
-                const overflowCount = members.length - maxVisible
-                return (
-                    <div className='flex -space-x-2'>
-                        {visibleMembers.map((member, index) => (
-                            <Avatar key={`${member.email}-${index}`} className='ring-background ring-2 size-6'>
-                                <AvatarImage src={member.imageUrl} alt={member.name} />
-                                <AvatarFallback className='text-xs'>{member.name?.charAt(0) ?? '?'}</AvatarFallback>
-                            </Avatar>
-                        ))}
-                        {overflowCount > 0 && (
-                            <Avatar className='ring-background ring-2 size-6'>
-                                <AvatarFallback className='text-xs'>+{overflowCount}</AvatarFallback>
-                            </Avatar>
-                        )}
-                    </div>
-                )
             }
         },
         {
@@ -194,13 +158,7 @@ export default function ProjectTable({
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <ProjectUserDialog
-                                project={row.original}
-                                existingUsers={row.original.members}
-                                getUsers={getUsers}
-                                addProjectMember={addProjectMember}
-                                removeProjectMember={removeProjectMember}
-                            />
+                            <ProjectUserDialog projectId={row.original._id} />
                         </TooltipTrigger>
                         <TooltipContent>
                             <p>Assoicated Users</p>
@@ -211,10 +169,100 @@ export default function ProjectTable({
         },
     ]
 
+    const ProjectMembers = ({ projectId }: { projectId: Id<'projects'> }) => {
+        const reports: Reports = useQuery(api.projects.getProjectReports, { projectId }) || []
+        if (reports.length === 0) {
+            return (
+                <TableRow>
+                    <TableCell colSpan={4} className='h-16 text-center text-muted-foreground'>
+                        No report submitted for this project.
+                    </TableCell>
+                </TableRow>
+            )
+        }
+        return (
+            <>
+                {reports.map(report => (
+                    <TableRow key={report._id}>
+                        <TableCell className='text-right'>
+                            <Button variant='ghost' size='icon' className='cursor-pointer'>
+                                <ExternalLink className='size-4' />
+                            </Button>
+                        </TableCell>
+                        <TableCell>
+                            {(() => {
+                                const status = report.currentStatus
+                                switch (status) {
+                                    case 'On Track':
+                                        return (
+                                            <Badge variant='outline' className='rounded-full border-green-600 bg-green-600/10 text-green-800 focus-visible:ring-green-600/20 focus-visible:outline-none dark:bg-green-400/10 dark:text-green-400 dark:focus-visible:ring-green-400/40 [a&]:hover:bg-green-600/5 dark:[a&]:hover:bg-green-400/5'>
+                                                {status}
+                                            </Badge>
+                                        )
+                                    case 'Minor Issues':
+                                        return (
+                                            <Badge variant='outline' className='rounded-full border-yellow-600 bg-yellow-600/10 text-yellow-800 focus-visible:ring-yellow-600/20 focus-visible:outline-none dark:bg-yellow-400/10 dark:text-yellow-400 dark:focus-visible:ring-yellow-400/40 [a&]:hover:bg-yellow-600/5 dark:[a&]:hover:bg-yellow-400/5'>
+                                                {status}
+                                            </Badge>
+                                        )
+                                    default:
+                                        return (
+                                            <Badge variant='outline' className='rounded-full border-red-600 bg-red-600/10 text-red-800 focus-visible:ring-red-600/20 focus-visible:outline-none dark:bg-red-400/10 dark:text-red-400 dark:focus-visible:ring-red-400/40 [a&]:hover:bg-red-600/5 dark:[a&]:hover:bg-red-400/5'>
+                                                {status}
+                                            </Badge>
+                                        )
+                                }
+                            })()}
+                        </TableCell>
+                        <TableCell>{`${report.month}/${report.year}`}</TableCell>
+                        <TableCell>{report.findings.length}</TableCell>
+                        <TableCell>
+                            {(() => {
+                                const status = report.aproved ? 'Approved' : 'Pending'
+                                switch (status) {
+                                    case 'Approved':
+                                        return (
+                                            <Badge variant='outline' className='rounded-full border-green-600 bg-green-600/10 text-green-800 focus-visible:ring-green-600/20 focus-visible:outline-none dark:bg-green-400/10 dark:text-green-400 dark:focus-visible:ring-green-400/40 [a&]:hover:bg-green-600/5 dark:[a&]:hover:bg-green-400/5'>
+                                                {status}
+                                            </Badge>
+                                        )
+                                    default:
+                                        return (
+                                            <Badge variant='outline' className='rounded-full border-yellow-600 bg-yellow-600/10 text-yellow-800 focus-visible:ring-yellow-600/20 focus-visible:outline-none dark:bg-yellow-400/10 dark:text-yellow-400 dark:focus-visible:ring-yellow-400/40 [a&]:hover:bg-yellow-600/5 dark:[a&]:hover:bg-yellow-400/5'>
+                                                {status}
+                                            </Badge>
+                                        )
+                                }
+                            })()}
+                        </TableCell>
+                        <TableCell>
+                            <Button variant='ghost' size='icon' className='cursor-pointer'>
+                                <Link href={`${process.env.NEXT_PUBLIC_CONVEX_SITE_URL}/file?id=${report.attachmentId}`} target='_blank'>
+                                    <DownloadIcon className='size-4' />
+                                </Link>
+                            </Button>
+                        </TableCell>
+                        <TableCell>
+                            {report.finalAttachmentId ? (
+                                <Button variant='ghost' size='icon' className='cursor-pointer'>
+                                    <Link href={`${process.env.NEXT_PUBLIC_CONVEX_SITE_URL}/file?id=${report.finalAttachmentId}`} target='_blank'>
+                                        <DownloadIcon className='size-4' />
+                                    </Link>
+                                </Button>
+                            ) : (
+                                '-'
+                            )}
+                        </TableCell>
+                    </TableRow>
+                ))}
+            </>
+        )
+    }
+
     const table = useReactTable({
         data: projects || [],
         columns: columns as ColumnDef<Project>[],
-        getRowCanExpand: row => Boolean(row.original.members),
+        getRowCanExpand: () => true,
         getCoreRowModel: getCoreRowModel(),
         getExpandedRowModel: getExpandedRowModel()
     })
@@ -258,28 +306,16 @@ export default function ProjectTable({
                                                 <TableHeader className='border-b text-xs'>
                                                     <TableRow className='hover:bg-muted/30!'>
                                                         <TableHead className='w-23.5 text-muted-foreground'></TableHead>
-                                                        <TableHead className='text-muted-foreground'>Member Name</TableHead>
-                                                        <TableHead className='text-muted-foreground'>Role</TableHead>
-                                                        <TableHead className='text-muted-foreground'>Email</TableHead>
+                                                        <TableHead className='text-muted-foreground'>Overall Project Rating</TableHead>
+                                                        <TableHead className='text-muted-foreground'>Report Period</TableHead>
+                                                        <TableHead className='text-muted-foreground'>Total Findings Reported</TableHead>
+                                                        <TableHead className='text-muted-foreground'>Approval Status</TableHead>
+                                                        <TableHead className='text-muted-foreground'>Original Report</TableHead>
+                                                        <TableHead className='text-muted-foreground'>Final Report</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {row.original.members && row.original.members.length > 0 ? (
-                                                        row.original.members.map(member => (
-                                                            <TableRow key={member.email}>
-                                                                <TableCell></TableCell>
-                                                                <TableCell>{member.name}</TableCell>
-                                                                <TableCell>{member.role}</TableCell>
-                                                                <TableCell>{member.email}</TableCell>
-                                                            </TableRow>
-                                                        ))
-                                                    ) : (
-                                                        <TableRow>
-                                                            <TableCell colSpan={4} className='h-16 text-center text-muted-foreground'>
-                                                                No associated users.
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    )}
+                                                    <ProjectMembers projectId={row.original._id as Id<'projects'>} />
                                                 </TableBody>
                                             </Table>
                                         </TableCell>

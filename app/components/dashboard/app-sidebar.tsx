@@ -35,6 +35,8 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 import { UserButton, useUser } from "@clerk/nextjs"
+import { api } from "@/convex/_generated/api"
+import { useQuery } from "convex/react"
 
 type MenuSubItem = {
     label: string
@@ -51,11 +53,30 @@ type MenuItem = {
         | { href?: never; badge?: never; items: MenuSubItem[] }
     )
 
-const pagesItems: MenuItem[] = [
+const adminPagesItems: MenuItem[] = [
     { icon: Plus, label: "New Project", highlighted: true, href: "/dashboard/new" },
     { icon: HomeIcon, label: "Home", href: "/" },
     { icon: ChartArea, label: "Dashboard", href: "/dashboard" },
     { icon: KanbanSquare, label: "Project Management", href: "/dashboard/projects" },
+    { icon: User, label: "User Management", href: "/dashboard/users" },
+    {
+        icon: PackageIcon,
+        label: "Projects",
+        items: [
+        ],
+    },
+    {
+        icon: ArrowRightLeftIcon,
+        label: "Reports",
+        items: [
+        ],
+    },
+]
+
+const vendorPagesItems: MenuItem[] = [
+    { icon: Plus, label: "Submit Report", highlighted: true, href: "/dashboard/new" },
+    { icon: HomeIcon, label: "Home", href: "/" },
+    { icon: ChartArea, label: "Dashboard", href: "/dashboard" },
     { icon: User, label: "User Management", href: "/dashboard/users" },
     {
         icon: PackageIcon,
@@ -76,10 +97,35 @@ const pagesItems: MenuItem[] = [
     },
 ]
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ role = 'vendor', ...props }: React.ComponentProps<typeof Sidebar> & { role: 'admin' | 'vendor' }) {
     const { open } = useSidebar()
     const { user } = useUser()
     const userButtonRef = useRef<HTMLButtonElement>(null)
+    const projects = useQuery(api.projects.getProjects, {}) || []
+    const reports = useQuery(api.reports.getMyReports, {}) || []
+
+    const pagesItems = () => {
+        const baseItems = role === 'admin' ? adminPagesItems : vendorPagesItems
+        const projectNameById = new Map((projects || []).map(project => [project._id, project.projectName]))
+        const projectSubItems: MenuSubItem[] = (projects || []).map(project => ({
+            label: project.projectName,
+            href: `/dashboard/projects/${project._id}`,
+        }))
+        const reportSubItems: MenuSubItem[] = (reports || []).map(report => ({
+            label: `${report.month}/${report.year} - ${projectNameById.get(report.projectId) ?? "Project"}`,
+            href: `/dashboard/reports/${report._id}`,
+        }))
+
+        return baseItems.map(item => {
+            if ('items' in item && item.label === 'Projects') {
+                return { ...item, items: projectSubItems }
+            }
+            if ('items' in item && item.label === 'Reports') {
+                return { ...item, items: reportSubItems }
+            }
+            return item
+        })
+    }
 
     return (
         <Sidebar
@@ -104,7 +150,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarGroup>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {pagesItems.map((item) =>
+                            {pagesItems().map((item) =>
                                 item.items ? (
                                     <Collapsible className="group/collapsible" key={item.label}>
                                         <SidebarMenuItem>
@@ -119,8 +165,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                                 <SidebarMenuSub>
                                                     {item.items.map((subItem) => (
                                                         <SidebarMenuSubItem key={subItem.label}>
-                                                            <SidebarMenuSubButton className="justify-between" asChild>
-                                                                <Link href={subItem.href}>
+                                                            <SidebarMenuSubButton asChild>
+                                                                <Link href={subItem.href} className="truncate">
                                                                     {subItem.label}
                                                                     {subItem.badge && (
                                                                         <span className="bg-primary/10 flex h-5 min-w-5 items-center justify-center rounded-full text-xs">
@@ -162,10 +208,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             size="lg"
                             className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                             onClick={(e) => {
-                                // Find the UserButton's trigger button and click it when clicking on the parent div
                                 if (userButtonRef.current) {
-                                    // Clerk's UserButton typically renders a button element
-                                    // Try to find it using various selectors
                                     const clerkButton = userButtonRef.current.querySelector('[data-clerk-element="userButton"]') as HTMLElement;
                                     const fallbackButton = userButtonRef.current.querySelector('button') as HTMLButtonElement;
                                     const userButtonTrigger = clerkButton?.querySelector('button') as HTMLButtonElement ||
