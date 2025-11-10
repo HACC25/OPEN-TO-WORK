@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
+import { useId } from "react";
 
 const FormSchema = z.object({
     projectName: z.string().min(1, { message: "Project name is required" }),
@@ -56,6 +57,7 @@ const FormSchema = z.object({
 });
 
 export default function Page() {
+    const formId = useId();
     const form = useForm<z.input<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -105,7 +107,7 @@ export default function Page() {
                 <p className='text-muted-foreground'>Enter the details for the new project record</p>
             </div>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className='grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-6'>
+                <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className='grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-6'>
                     <FormField
                         control={form.control}
                         name='projectName'
@@ -342,7 +344,7 @@ export default function Page() {
                                 Cancel
                             </Button>
                         </Link>
-                        <Button type='submit' className='cursor-pointer'>
+                        <Button type='submit' form={formId} className='cursor-pointer'>
                             Save Project
                         </Button>
                     </div>

@@ -19,7 +19,7 @@ const FindingSchema = z.object({
     description: z.string().min(1, { message: "Description is required" }),
     impactRating: z.union([z.literal('Low'), z.literal('Medium'), z.literal('High')]),
     likelihoodRating: z.union([z.literal('Low'), z.literal('Medium'), z.literal('High')]),
-    recommendation: z.string().min(1, { message: "Recommendation is required" }).min(10, { message: "Recommendation must be at least 10 characters long" }),
+    recommendation: z.string().min(1, { message: "Recommendation is required" }).min(1, { message: "Recommendation must be at least 10 characters long" }),
     status: z.union([z.literal('Open'), z.literal('In Progress'), z.literal('Closed')]),
 });
 
@@ -54,7 +54,7 @@ export default function ReportFindingDialog({
         if (dialogOpen) {
             form.reset(DEFAULT_FINDING);
         }
-    }, [dialogOpen]);
+    }, [dialogOpen, form]);
 
     return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -203,7 +203,11 @@ export default function ReportFindingDialog({
                 </Form>
                 <DialogFooter>
                     <Button type='button' variant='outline' className='cursor-pointer' onClick={() => setDialogOpen(false)}>Cancel</Button>
-                    <Button type='submit' form={id} className='cursor-pointer'>
+                    <Button
+                        type='button'
+                        className='cursor-pointer'
+                        onClick={() => form.handleSubmit(onSubmit)()}
+                    >
                         <PlusIcon /> Add Finding
                     </Button>
                 </DialogFooter>
