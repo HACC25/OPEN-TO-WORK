@@ -61,12 +61,13 @@ export default defineSchema({
         finalAttachmentId: v.optional(v.id('_storage')),
         updatedAt: v.number(),
     })
-    .index("by_project_id", ["projectId"])
-    .index("by_author_id", ["authorId"])
-    .index("by_month_year", ["month", "year"])
-    .index("by_approved", ["aproved"])
-    .index("by_attachment_id", ["attachmentId"])
-    .index("by_final_attachment_id", ["finalAttachmentId"]),
+        .index("by_project_id", ["projectId"])
+        .index("by_author_id", ["authorId"])
+        .index("by_month_year", ["month", "year"])
+        .index("by_month_year_project", ["month", "year", "projectId"])
+        .index("by_approved", ["aproved"])
+        .index("by_attachment_id", ["attachmentId"])
+        .index("by_final_attachment_id", ["finalAttachmentId"]),
 
     findings: defineTable({
         projectId: v.id('projects'),
@@ -81,12 +82,12 @@ export default defineSchema({
         status: v.union(v.literal('Open'), v.literal('In Progress'), v.literal('Closed')),
         updatedAt: v.number(),
     })
-    .index("by_project_id", ["projectId"])
-    .index("by_report_id", ["reportId"])
-    .index("by_author_id", ["authorId"])
-    .index("by_finding_type", ["findingType"])
-    .index("by_impact_rating", ["impactRating"])
-    .index("by_status", ["status"]),
+        .index("by_project_id", ["projectId"])
+        .index("by_report_id", ["reportId"])
+        .index("by_author_id", ["authorId"])
+        .index("by_finding_type", ["findingType"])
+        .index("by_impact_rating", ["impactRating"])
+        .index("by_status", ["status"]),
 
     comments: defineTable({
         projectId: v.id('projects'),
@@ -94,13 +95,13 @@ export default defineSchema({
         authorId: v.id('users'),
         content: v.string(),
     })
-    .index("by_project_id", ["projectId"])
-    .index("by_report_id", ["reportId"])
-    .index("by_author_id", ["authorId"]),
+        .index("by_project_id", ["projectId"])
+        .index("by_report_id", ["reportId"])
+        .index("by_author_id", ["authorId"]),
 
     log: defineTable({
         action: v.union(v.literal('creation'), v.literal('update'), v.literal('deletion')),
         description: v.string(),
     })
-    .index("by_action", ["action"]),
+        .index("by_action", ["action"]),
 });
