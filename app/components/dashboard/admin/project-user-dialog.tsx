@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useState } from 'react'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Id } from '@/convex/_generated/dataModel'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default function ProjectUserDialog({
     projectId,
@@ -30,11 +31,18 @@ export default function ProjectUserDialog({
 
     return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-                <Button variant='ghost' size='icon' className='cursor-pointer'>
-                    <Users />
-                </Button>
-            </DialogTrigger>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                        <Button variant='ghost' size='icon' className='cursor-pointer'>
+                            <Users />
+                        </Button>
+                    </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Manage members</p>
+                </TooltipContent>
+            </Tooltip>
             <DialogContent>
                 <DialogHeader className='text-center'>
                     <DialogTitle className='text-xl'>Add users to project </DialogTitle>
