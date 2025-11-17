@@ -432,9 +432,10 @@ export const getApprovedReports = query({
         vendor: v.optional(v.string()),
         period: v.optional(v.string()),
         rating: v.optional(v.string()),
+        search: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const { agency, vendor, period, rating } = args;
+        const { agency, vendor, period, rating, search } = args;
         const approvedReports = await ctx.db.query('reports').withIndex('by_approved', q => q.eq('aproved', true)).collect();
         if (approvedReports.length === 0) {
             return [];
@@ -461,6 +462,8 @@ export const getApprovedReports = query({
             }
         }
 
+        const normalizedSearch = search?.trim().toLowerCase();
+
         const filteredReports = approvedReports
             .map(report => {
                 const project = projectMap.get(report.projectId);
@@ -473,6 +476,7 @@ export const getApprovedReports = query({
                     month: report.month,
                     year: report.year,
                     finalAttachmentId: report.finalAttachmentId,
+                    summary: report.summary,
                 };
             })
             .filter(report => {
@@ -480,9 +484,35 @@ export const getApprovedReports = query({
                 if (vendor?.trim().length && report.vendorName !== vendor) return false;
                 if (rating?.trim().length && report.currentStatus !== rating) return false;
                 if (targetMonth !== undefined && targetYear !== undefined && (report.month !== targetMonth || report.year !== targetYear)) return false;
+                if (normalizedSearch) {
+                    const haystacks = [report.projectName, report.sponsoringAgency, report.vendorName, report.summary]
+                        .filter((value): value is string => Boolean(value))
+                        .map(value => value.toLowerCase());
+                    const hasMatch = haystacks.some(value => value.includes(normalizedSearch));
+                    if (!hasMatch) return false;
+                }
                 return true;
             })
             .sort((a, b) => b.updatedAt - a.updatedAt);
         return filteredReports;
+    }
+});
+
+export const getHomePageReports = query({
+    handler: async (ctx) => {
+        const reports = await ctx.db
+            .query('reports')
+            .withIndex('by_approved', q => q.eq('aproved', true))
+            .take(3);
+        const reportsWithProjectName = await Promise.all(reports.map(async (report) => {
+            const project = await ctx.db.get(report.projectId);
+            return {
+                ...report,
+                projectName: project?.projectName,
+                sponsoringAgency: project?.sponsoringAgency,
+                vendorName: project?.vendorName,
+            };
+        }));
+        return reportsWithProjectName;
     }
 });

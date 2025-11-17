@@ -26,16 +26,18 @@ export default function Page() {
     const [selectedVendor, setSelectedVendor] = useState<string>();
     const [selectedPeriod, setSelectedPeriod] = useState<string>();
     const [selectedRating, setSelectedRating] = useState<string>();
+    const [searchTerm, setSearchTerm] = useState("");
 
-    const reportFilters = useMemo(
-        () => ({
+    const reportFilters = useMemo(() => {
+        const trimmedSearch = searchTerm.trim();
+        return {
             agency: selectedAgency,
             vendor: selectedVendor,
             period: selectedPeriod,
             rating: selectedRating,
-        }),
-        [selectedAgency, selectedVendor, selectedPeriod, selectedRating]
-    );
+            search: trimmedSearch.length ? trimmedSearch : undefined,
+        };
+    }, [searchTerm, selectedAgency, selectedVendor, selectedPeriod, selectedRating]);
 
     const approvedReports = useQuery(api.reports.getApprovedReports, reportFilters);
     const reports = approvedReports ?? [];
@@ -57,6 +59,8 @@ export default function Page() {
                     <Input
                         placeholder="Search by project name or keywords..."
                         className="peer w-full h-12 bg-background pl-11 text-lg"
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
                     />
                 </div>
                 <div className="flex flex-wrap justify-center gap-3">

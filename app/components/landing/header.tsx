@@ -17,7 +17,7 @@ export const Header = () => {
                 </div>
 
                 {/* Desktop Navigation */}
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-6 pr-30">
                     <Link href="/" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
                         Home
                     </Link>
@@ -33,14 +33,6 @@ export const Header = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            type="search"
-                            placeholder="Search projects..."
-                            className="h-10 w-64 pl-9"
-                        />
-                    </div>
                     <SignedOut>
                         <SignInButton>
                             <Button variant="default" className="cursor-pointer">
