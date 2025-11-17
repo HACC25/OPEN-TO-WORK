@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
@@ -67,5 +67,13 @@ http.route({
     }),
 });
 
+http.route({
+    path: "/get-info",
+    method: "GET",
+    handler: httpAction(async (ctx) => {
+        const projects = await ctx.runQuery(api.projects.getInfoForApi);
+        return new Response(JSON.stringify(projects));
+    }),
+});
 
 export default http;
