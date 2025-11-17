@@ -62,6 +62,70 @@ export const createReport = mutation({
     }
 });
 
+export const updateReport = mutation({
+    args: {
+        reportId: v.id('reports'),
+        draft: v.boolean(),
+        currentStatus: v.union(v.literal('On Track'), v.literal('Minor Issues'), v.literal('Critical')),
+        teamPerformance: v.optional(v.union(v.literal('On Track'), v.literal('Minor Issues'), v.literal('Critical'))),
+        projectManagement: v.optional(v.union(v.literal('On Track'), v.literal('Minor Issues'), v.literal('Critical'))),
+        technicalReadiness: v.optional(v.union(v.literal('On Track'), v.literal('Minor Issues'), v.literal('Critical'))),
+        summary: v.string(),
+        accomplishments: v.optional(v.string()),
+        challenges: v.optional(v.string()),
+        upcomingMilestones: v.optional(v.string()),
+        budgetStatus: v.optional(v.string()),
+        scheduleStatus: v.optional(v.string()),
+        riskSummary: v.optional(v.string()),
+        attachmentId: v.id('_storage'),
+        findings: v.optional(v.array(v.object({
+            findingNumber: v.string(),
+            findingType: v.union(v.literal('Risk'), v.literal('Issue')),
+            description: v.string(),
+            impactRating: v.union(v.literal('Low'), v.literal('Medium'), v.literal('High')),
+            likelihoodRating: v.union(v.literal('Low'), v.literal('Medium'), v.literal('High')),
+            recommendation: v.string(),
+            status: v.union(v.literal('Open'), v.literal('In Progress'), v.literal('Closed')),
+        }))),
+    },
+    async handler(ctx, args) {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error('User not authenticated');
+        }
+        const user = await ctx.db.query('users').withIndex('by_clerk_id', q => q.eq('clerkId', identity.subject)).first();
+        if (!user) {
+            throw new Error('User not found in database');
+        }
+
+        const report = await ctx.db.get(args.reportId);
+        if (!report) {
+            throw new Error('Report not found');
+        }
+        const existingFindings = await ctx.db.query('findings').withIndex('by_report_id', q => q.eq('reportId', args.reportId)).collect();
+        for (const finding of existingFindings) {
+            await ctx.db.delete(finding._id);
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { findings, reportId, ...reportData } = args;
+        await ctx.db.patch(args.reportId, {
+            ...reportData,
+            updatedAt: Date.now(),
+        });
+
+        for (const finding of findings || []) {
+            await ctx.db.insert('findings', {
+                ...finding,
+                projectId: report.projectId,
+                reportId: args.reportId,
+                authorId: user._id,
+                updatedAt: Date.now(),
+            });
+        }
+        return args.reportId;
+    }
+});
+
 export const generateUploadUrl = mutation({
     handler: async (ctx) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -94,7 +158,102 @@ export const getMyReports = query({
             const projectReports = await ctx.db.query('reports').withIndex('by_project_id', q => q.eq('projectId', project.projectId)).collect();
             return projectReports;
         }));
-        console.log('refreshed reports')
         return reports.flat().sort((a, b) => b.updatedAt - a.updatedAt);
+    }
+});
+
+export const getReport = query({
+    args: {
+        projectId: v.id('projects'),
+    },
+    handler: async (ctx, args) => {
+        const reports = await ctx.db.query('reports').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
+        return reports;
+    }
+});
+
+export const getReportById = query({
+    args: {
+        reportId: v.id('reports'),
+    },
+    handler: async (ctx, args) => {
+        const report = await ctx.db.get(args.reportId);
+        return report;
+    }
+});
+
+export const getFindingsByReport = query({
+    args: {
+        reportId: v.id('reports'),
+    },
+    handler: async (ctx, args) => {
+        const findings = await ctx.db.query('findings').withIndex('by_report_id', q => q.eq('reportId', args.reportId)).collect();
+        return findings;
+    }
+});
+
+export const getFindingsByProject = query({
+    args: {
+        projectId: v.id('projects'),
+    },
+    handler: async (ctx, args) => {
+        const findings = await ctx.db.query('findings').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
+        return findings;
+    }
+});
+
+export const updateFinalAttachment = mutation({
+    args: {
+        reportId: v.id('reports'),
+        finalAttachmentId: v.id('_storage'),
+    },
+    async handler(ctx, args) {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error('User not authenticated');
+        }
+        const user = await ctx.db.query('users').withIndex('by_clerk_id', q => q.eq('clerkId', identity.subject)).first();
+        if (!user) {
+            throw new Error('User not found in database');
+        }
+
+        const report = await ctx.db.get(args.reportId);
+        if (!report) {
+            throw new Error('Report not found');
+        }
+        await ctx.db.patch(args.reportId, {
+            finalAttachmentId: args.finalAttachmentId,
+            updatedAt: Date.now(),
+        });
+        return args.reportId;
+    }
+});
+
+export const toggleReportApproval = mutation({
+    args: {
+        reportId: v.id('reports'),
+    },
+    async handler(ctx, args) {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error('User not authenticated');
+        }
+        const user = await ctx.db.query('users').withIndex('by_clerk_id', q => q.eq('clerkId', identity.subject)).first();
+        if (!user) {
+            throw new Error('User not found in database');
+        }
+
+        const report = await ctx.db.get(args.reportId);
+        if (!report) {
+            throw new Error('Report not found');
+        }
+
+        const newApprovedStatus = !report.aproved;
+        await ctx.db.patch(args.reportId, {
+            aproved: newApprovedStatus,
+            published: newApprovedStatus,
+            updatedAt: Date.now(),
+        });
+        return args.reportId;
     }
 });

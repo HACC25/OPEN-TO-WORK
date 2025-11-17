@@ -152,7 +152,7 @@ export function AppSidebar({ role = 'vendor', ...props }: React.ComponentProps<t
                         <SidebarMenu>
                             {pagesItems().map((item) =>
                                 item.items ? (
-                                    <Collapsible className="group/collapsible" key={item.label}>
+                                    <Collapsible className="group/collapsible" defaultOpen key={item.label}>
                                         <SidebarMenuItem>
                                             <CollapsibleTrigger asChild>
                                                 <SidebarMenuButton className="truncate">

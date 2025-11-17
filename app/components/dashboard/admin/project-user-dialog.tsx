@@ -18,15 +18,16 @@ export default function ProjectUserDialog({
 }) {
     const [dialogOpen, setDialogOpen] = useState(false)
     const [popoverOpen, setPopoverOpen] = useState(false)
+    const [searchString, setSearchString] = useState('')
 
     const projectMembers = useQuery(api.projects.getProjectMembers, dialogOpen ? { projectId: projectId } : "skip") || [];
-    const vendors = useQuery(api.users.getUsers, dialogOpen ? { searchString: '', excludeRole: 'user' } : "skip") || [];
+    const vendors = useQuery(api.users.getUsers, dialogOpen ? { searchString: searchString, excludeRole: 'user' } : "skip") || [];
     const addProjectMemberMutation = useMutation(api.projects.addProjectMember);
     const removeProjectMemberMutation = useMutation(api.projects.removeProjectMember);
 
     const [selectedVendorId, setSelectedVendorId] = useState<Id<'users'> | null>(null)
     const selectedVendor = vendors.find(vendor => vendor._id === selectedVendorId) || null;
-    
+
     return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -41,7 +42,12 @@ export default function ProjectUserDialog({
                 <div className='w-full max-w-xs space-y-2'>
                     <Label>Select an user</Label>
                     <div className='flex items-center justify-between gap-2'>
-                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                        <Popover open={popoverOpen} onOpenChange={(open) => {
+                            setPopoverOpen(open)
+                            if (!open) {
+                                setSearchString('')
+                            }
+                        }}>
                             <PopoverTrigger asChild>
                                 <Button variant='outline' role='combobox' aria-expanded={dialogOpen} className='w-full justify-between'>
                                     {selectedVendor ? (
@@ -59,8 +65,12 @@ export default function ProjectUserDialog({
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className='w-[300px] p-0'>
-                                <Command>
-                                    <CommandInput placeholder='Search user...' />
+                                <Command shouldFilter={false}>
+                                    <CommandInput
+                                        placeholder='Search user...'
+                                        value={searchString}
+                                        onValueChange={setSearchString}
+                                    />
                                     <CommandList>
                                         <CommandEmpty>No users found.</CommandEmpty>
                                         <CommandGroup>

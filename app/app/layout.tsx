@@ -4,6 +4,7 @@ import ConvexClientProvider from "@/providers/convex-client-provider";
 import { shadcn } from '@clerk/themes';
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
                     }}
                 >
                     <ConvexClientProvider>
+                        <Toaster />
                         {children}
                     </ConvexClientProvider>
                 </ClerkProvider>

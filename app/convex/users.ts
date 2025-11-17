@@ -93,6 +93,13 @@ export const isAdmin = query(async (ctx) => {
     return user?.role === 'admin';
 });
 
+export const getUserById = query({
+    args: { userId: v.id('users') },
+    handler: async (ctx, args) => {
+        return await ctx.db.get(args.userId);
+    }
+});
+
 export const getUsers = query({
     args: {
         searchString: v.string(),

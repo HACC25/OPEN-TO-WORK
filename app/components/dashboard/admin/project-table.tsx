@@ -32,7 +32,7 @@ export default function ProjectTable() {
                 return row.getCanExpand() ? (
                     <Button
                         {...{
-                            className: 'size-7 shadow-none text-muted-foreground',
+                            className: 'size-7 shadow-none text-muted-foreground cursor-pointer',
                             onClick: row.getToggleExpandedHandler(),
                             'aria-expanded': row.getIsExpanded(),
                             'aria-label': row.getIsExpanded()
@@ -54,7 +54,14 @@ export default function ProjectTable() {
         {
             header: 'Project Name',
             accessorKey: 'projectName',
-            cell: ({ row }) => <div>{row.original.projectName}</div>
+            cell: ({ row }) => (
+                <Link
+                    href={`/dashboard/projects/${row.original._id}`}
+                    className="underline"
+                >
+                    {row.original.projectName}
+                </Link>
+            )
         },
         {
             header: 'Agency',
