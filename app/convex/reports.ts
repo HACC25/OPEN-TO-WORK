@@ -195,12 +195,24 @@ export const getMyReports = query({
         if (!user) {
             return [];
         }
+        if (user.role == 'admin') {
+            const reports = await ctx.db.query('reports').collect();
+            return reports.sort((a, b) => {
+                const aYearMonth = a.year * 10 + a.month;
+                const bYearMonth = b.year * 10 + b.month;
+                return bYearMonth - aYearMonth;
+            });
+        }
         const projects = await ctx.db.query('projectMembers').withIndex('by_user_id', q => q.eq('userId', user._id)).collect();
         const reports = await Promise.all(projects.map(async (project) => {
             const projectReports = await ctx.db.query('reports').withIndex('by_project_id', q => q.eq('projectId', project.projectId)).collect();
             return projectReports;
         }));
-        return reports.flat().sort((a, b) => b.updatedAt - a.updatedAt);
+        return reports.flat().sort((a, b) => {
+            const aYearMonth = a.year * 10 + a.month;
+            const bYearMonth = b.year * 10 + b.month;
+            return bYearMonth - aYearMonth;
+        });
     }
 });
 
