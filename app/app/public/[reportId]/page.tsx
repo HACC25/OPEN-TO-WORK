@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { CalendarDays, CircleAlert, DownloadIcon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function Page({
     params
@@ -25,10 +26,18 @@ export default function Page({
             <div className="flex flex-col gap-2 w-full max-w-4xl">
                 <div className="flex flex-row items-center justify-between gap-2">
                     <h1 className="text-3xl font-bold">{project?.projectName}</h1>
-                    <Button variant="outline" className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground/90 cursor-pointer">
-                        <DownloadIcon className="size-4" />
-                        Download Report
-                    </Button>
+                    {report?.finalAttachmentId ? (
+                        <Button variant="outline" className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground/90 cursor-pointer" asChild>
+                            <Link
+                                href={`${process.env.NEXT_PUBLIC_CONVEX_SITE_URL}/file?id=${report.finalAttachmentId}`}
+                                target="_blank"
+                                download
+                            >
+                                <DownloadIcon className="size-4 mr-2" />
+                                Download Report
+                            </Link>
+                        </Button>
+                    ) : <></>}
                 </div>
                 <p className="text-sm text-muted-foreground">IV&V Report — {report?.month}/{report?.year}</p>
                 <Badge variant="outline" className="rounded-full border-green-600 bg-green-600/10 text-green-800 focus-visible:ring-green-600/20 focus-visible:outline-none dark:bg-green-400/10 dark:text-green-400 dark:focus-visible:ring-green-400/40 [a&]:hover:bg-green-600/5 dark:[a&]:hover:bg-green-400/5">Approved</Badge>
