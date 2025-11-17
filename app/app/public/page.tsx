@@ -181,7 +181,7 @@ export default function Page() {
                             <TableBody>
                                 {isLoadingReports ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                             Fetching approved reports...
                                         </TableCell>
                                     </TableRow>
@@ -242,7 +242,7 @@ export default function Page() {
                                     })
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                             No approved reports match your filters.
                                         </TableCell>
                                     </TableRow>
