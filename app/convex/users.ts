@@ -15,16 +15,21 @@ export const createUser = internalMutation({
             args.email_addresses[0]?.email_address;
         const existingUser = await ctx.db.query('users').withIndex('by_email', q => q.eq('email', primaryEmail)).first();
         if (existingUser) {
-            return ctx.db.patch(existingUser._id, {
+            await ctx.db.patch(existingUser._id, {
                 clerkId: args.clerkId,
                 name: args.name,
                 imageUrl: args.imageUrl,
                 role: 'vendor',
                 isActive: true,
                 updatedAt: Date.now(),
-            })
+            });
+            await ctx.db.insert('log', {
+                action: 'update',
+                description: `User "${args.name}" updated from "${existingUser.name}"`,
+            });
+            return existingUser._id;
         }
-        return ctx.db.insert('users', {
+        const userId = await ctx.db.insert('users', {
             clerkId: args.clerkId,
             email: primaryEmail,
             name: args.name,
@@ -32,7 +37,12 @@ export const createUser = internalMutation({
             role: 'vendor',
             isActive: true,
             updatedAt: Date.now(),
-        })
+        });
+        await ctx.db.insert('log', {
+            action: 'creation',
+            description: `User "${args.name}" created`,
+        });
+        return userId;
     }
 });
 
@@ -50,7 +60,7 @@ export const updateUser = internalMutation({
             args.email_addresses[0]?.email_address;
         const user = await ctx.db.query('users').withIndex('by_clerk_id', q => q.eq('clerkId', args.clerkId)).first();
         if (!user) {
-            return ctx.db.insert('users', {
+            const userId = await ctx.db.insert('users', {
                 clerkId: args.clerkId,
                 email: primaryEmail,
                 name: args.name,
@@ -58,14 +68,24 @@ export const updateUser = internalMutation({
                 role: 'vendor',
                 isActive: true,
                 updatedAt: Date.now(),
-            })
+            });
+            await ctx.db.insert('log', {
+                action: 'creation',
+                description: `User "${args.name}" created`,
+            });
+            return userId;
         }
-        return ctx.db.patch(user._id, {
+        await ctx.db.patch(user._id, {
             email: primaryEmail,
             name: args.name,
             imageUrl: args.imageUrl,
             updatedAt: Date.now(),
-        })
+        });
+        await ctx.db.insert('log', {
+            action: 'update',
+            description: `User "${args.name}" updated from "${user.name}"`,
+        });
+        return user._id;
     }
 });
 
@@ -76,11 +96,16 @@ export const deleteUser = internalMutation({
         if (!user) {
             return;
         }
-        return ctx.db.patch(user._id, {
+        await ctx.db.patch(user._id, {
             role: 'user',
             isActive: false,
             updatedAt: Date.now(),
         });
+        await ctx.db.insert('log', {
+            action: 'deletion',
+            description: `User "${user.name}" deactivated`,
+        });
+        return user._id;
     }
 });
 
@@ -160,10 +185,16 @@ export const updateUserMetadata = mutation({
         if (!user) {
             throw new Error('User not found in database');
         }
-        return ctx.db.patch(args._id, {
+        const targetUser = await ctx.db.get(args._id);
+        await ctx.db.patch(args._id, {
             isActive: args.isActive,
             role: args.role,
             updatedAt: Date.now(),
         });
+        await ctx.db.insert('log', {
+            action: 'update',
+            description: `User metadata updated for "${targetUser?.name || 'unknown'}" by ${user.name}`,
+        });
+        return args._id;
     }
 });

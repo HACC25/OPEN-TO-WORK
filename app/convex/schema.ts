@@ -64,7 +64,7 @@ export default defineSchema({
     .index("by_project_id", ["projectId"])
     .index("by_author_id", ["authorId"])
     .index("by_month_year", ["month", "year"])
-    .index("by_draft_aproved_published", ["draft", "aproved", "published"])
+    .index("by_approved", ["aproved"])
     .index("by_attachment_id", ["attachmentId"])
     .index("by_final_attachment_id", ["finalAttachmentId"]),
 
@@ -87,4 +87,20 @@ export default defineSchema({
     .index("by_finding_type", ["findingType"])
     .index("by_impact_rating", ["impactRating"])
     .index("by_status", ["status"]),
+
+    comments: defineTable({
+        projectId: v.id('projects'),
+        reportId: v.id('reports'),
+        authorId: v.id('users'),
+        content: v.string(),
+    })
+    .index("by_project_id", ["projectId"])
+    .index("by_report_id", ["reportId"])
+    .index("by_author_id", ["authorId"]),
+
+    log: defineTable({
+        action: v.union(v.literal('creation'), v.literal('update'), v.literal('deletion')),
+        description: v.string(),
+    })
+    .index("by_action", ["action"]),
 });

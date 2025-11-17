@@ -1,5 +1,5 @@
 import { api } from "@/convex/_generated/api";
-import { DownloadIcon } from "lucide-react"
+import { DownloadIcon, Trash2Icon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button";
 import type { ColumnDef } from '@tanstack/react-table'
@@ -7,8 +7,20 @@ import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-tabl
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { FunctionReturnType } from 'convex/server'
 import Link from 'next/link'
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Id } from "@/convex/_generated/dataModel";
+import { useCallback, useMemo, useState } from "react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Reports = FunctionReturnType<typeof api.reports.getReport>
 type Report = Reports[number]
@@ -90,10 +102,65 @@ export default function ReportsTable({
     projectId: Id<'projects'>
 }) {
     const reports = useQuery(api.reports.getReport, { projectId }) || [];
+    const deleteReport = useMutation(api.reports.deleteReport);
+    const [deletingId, setDeletingId] = useState<Id<'reports'> | null>(null);
+
+    const handleDelete = useCallback(async (reportId: Id<'reports'>) => {
+        try {
+            setDeletingId(reportId);
+            await deleteReport({ reportId });
+        } catch (error) {
+            console.error('Failed to delete report', error);
+        } finally {
+            setDeletingId(null);
+        }
+    }, [deleteReport]);
+
+    const columns = useMemo<ColumnDef<Report>[]>(() => [
+        ...reportColumns,
+        {
+            id: 'actions',
+            header: 'Actions',
+            cell: ({ row }) => {
+                const isDeleting = deletingId === row.original._id;
+                return (
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button
+                                variant='ghost'
+                                size='icon'
+                                className='cursor-pointer'
+                                disabled={isDeleting}
+                            >
+                                <Trash2Icon className='size-4' />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete report</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the selected report and remove all related findings and comments.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={() => handleDelete(row.original._id)}
+                                    disabled={isDeleting}
+                                >
+                                    {isDeleting ? 'Deleting...' : 'Delete'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                );
+            }
+        }
+    ], [deletingId, handleDelete]);
 
     const table = useReactTable({
         data: reports,
-        columns: reportColumns,
+        columns,
         getCoreRowModel: getCoreRowModel(),
     })
 

@@ -1,5 +1,5 @@
 import { AppSidebarHeader } from "@/components/dashboard/app-sidebar-header";
-import { Card, CardContent } from "@/components/ui/card";
+import VendorDashboard from "@/components/dashboard/vendor/dashboard";
 
 export default function Page() {
     const breadcrumbItems = [
@@ -10,11 +10,7 @@ export default function Page() {
         <>
             <AppSidebarHeader breadcrumbItems={breadcrumbItems} />
             <main className='size-full flex-1'>
-                <Card className='h-full'>
-                    <CardContent className='h-full'>
-                        <div>Home - WIP</div>
-                    </CardContent>
-                </Card>
+                <VendorDashboard />
             </main>
         </>
     )

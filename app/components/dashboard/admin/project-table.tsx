@@ -1,7 +1,7 @@
 'use client'
 
-import { Fragment } from 'react'
-import { ArrowRight, ChevronDownIcon, ChevronUpIcon, ExternalLink, DownloadIcon } from 'lucide-react'
+import { Fragment, useCallback, useState } from 'react'
+import { ArrowRight, ChevronDownIcon, ChevronUpIcon, ExternalLink, DownloadIcon, Trash2Icon } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { flexRender, getCoreRowModel, getExpandedRowModel, useReactTable } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
@@ -12,9 +12,20 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import ProjectUserDialog from './project-user-dialog'
 import { api } from '@/convex/_generated/api'
 import { FunctionReturnType } from 'convex/server'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import type { Id } from '@/convex/_generated/dataModel'
 import Link from 'next/link'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 
 type Projects = FunctionReturnType<typeof api.projects.getProjects>
@@ -23,6 +34,32 @@ type Reports = FunctionReturnType<typeof api.projects.getProjectReports>
 
 export default function ProjectTable() {
     const projects = useQuery(api.projects.getProjects, {}) || [];
+    const deleteProjectMutation = useMutation(api.projects.deleteProject);
+    const deleteReportMutation = useMutation(api.reports.deleteReport);
+    const [deletingProjectId, setDeletingProjectId] = useState<Id<'projects'> | null>(null);
+    const [deletingReportId, setDeletingReportId] = useState<Id<'reports'> | null>(null);
+
+    const handleDeleteProject = useCallback(async (projectId: Id<'projects'>) => {
+        try {
+            setDeletingProjectId(projectId);
+            await deleteProjectMutation({ projectId });
+        } catch (error) {
+            console.error('Failed to delete project', error);
+        } finally {
+            setDeletingProjectId(null);
+        }
+    }, [deleteProjectMutation]);
+
+    const handleDeleteReport = useCallback(async (reportId: Id<'reports'>) => {
+        try {
+            setDeletingReportId(reportId);
+            await deleteReportMutation({ reportId });
+        } catch (error) {
+            console.error('Failed to delete report', error);
+        } finally {
+            setDeletingReportId(null);
+        }
+    }, [deleteReportMutation]);
 
     const columns: ColumnDef<Project>[] = [
         {
@@ -155,8 +192,10 @@ export default function ProjectTable() {
                 <div className='flex items-center gap-1'>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant='ghost' size='icon' className='cursor-pointer'>
-                                <ExternalLink />
+                            <Button variant='ghost' size='icon' className='cursor-pointer' asChild>
+                                <Link href={`/dashboard/projects/${row.original._id}`}>
+                                    <ExternalLink />
+                                </Link>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -171,6 +210,35 @@ export default function ProjectTable() {
                             <p>Assoicated Users</p>
                         </TooltipContent>
                     </Tooltip>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button
+                                variant='ghost'
+                                size='icon'
+                                className='cursor-pointer'
+                                disabled={deletingProjectId === row.original._id}
+                            >
+                                <Trash2Icon className='size-4' />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete project</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. Deleting this project will also remove all associated reports, findings, comments, and members.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel disabled={deletingProjectId === row.original._id}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={() => handleDeleteProject(row.original._id as Id<'projects'>)}
+                                    disabled={deletingProjectId === row.original._id}
+                                >
+                                    {deletingProjectId === row.original._id ? 'Deleting...' : 'Delete'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </div>
             ),
         },
@@ -181,7 +249,7 @@ export default function ProjectTable() {
         if (reports.length === 0) {
             return (
                 <TableRow>
-                    <TableCell colSpan={4} className='h-16 text-center text-muted-foreground'>
+                    <TableCell colSpan={8} className='h-16 text-center text-muted-foreground'>
                         No report submitted for this project.
                     </TableCell>
                 </TableRow>
@@ -192,8 +260,10 @@ export default function ProjectTable() {
                 {reports.map(report => (
                     <TableRow key={report._id}>
                         <TableCell className='text-right'>
-                            <Button variant='ghost' size='icon' className='cursor-pointer'>
-                                <ExternalLink className='size-4' />
+                            <Button variant='ghost' size='icon' className='cursor-pointer' asChild>
+                                <Link href={`/dashboard/reports/${report._id}`}>
+                                    <ExternalLink />
+                                </Link>
                             </Button>
                         </TableCell>
                         <TableCell>
@@ -260,6 +330,37 @@ export default function ProjectTable() {
                                 '-'
                             )}
                         </TableCell>
+                        <TableCell>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button
+                                        variant='ghost'
+                                        size='icon'
+                                        className='cursor-pointer'
+                                        disabled={deletingReportId === report._id}
+                                    >
+                                        <Trash2Icon className='size-4' />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete report</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. Deleting this report will remove all related findings and comments.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel disabled={deletingReportId === report._id}>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={() => handleDeleteReport(report._id)}
+                                            disabled={deletingReportId === report._id}
+                                        >
+                                            {deletingReportId === report._id ? 'Deleting...' : 'Delete'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </TableCell>
                     </TableRow>
                 ))}
             </>
@@ -319,6 +420,7 @@ export default function ProjectTable() {
                                                         <TableHead className='text-muted-foreground'>Approval Status</TableHead>
                                                         <TableHead className='text-muted-foreground'>Original Report</TableHead>
                                                         <TableHead className='text-muted-foreground'>Final Report</TableHead>
+                                                        <TableHead className='text-muted-foreground'>Actions</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>

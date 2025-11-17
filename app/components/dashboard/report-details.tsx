@@ -3,7 +3,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { Card, CardHeader, CardContent, CardAction, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2Icon, DownloadIcon, ChevronDownIcon, Users, User, Calendar, Clock, CircleAlert, FileIcon, UploadIcon, CheckCircle2Icon, XCircleIcon, PencilIcon } from "lucide-react";
+import { Building2Icon, DownloadIcon, ChevronDownIcon, Users, User, Calendar, Clock, CircleAlert, FileIcon, UploadIcon, CheckCircle2Icon, XCircleIcon, PencilIcon, SendIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -15,13 +15,24 @@ import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 function formatDate(timestamp: number | undefined): string {
     if (!timestamp) return '-';
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateTime(timestamp: number | undefined): string {
+    if (!timestamp) return '-';
+    const date = new Date(timestamp);
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${dateStr} at ${timeStr}`;
 }
 
 
@@ -34,12 +45,19 @@ export default function ReportDetails({
     const project = useQuery(api.projects.getProjectById, report ? { projectId: report.projectId } : "skip");
     const reportAuthor = useQuery(api.users.getUserById, report ? { userId: report.authorId } : "skip");
     const findings = useQuery(api.reports.getFindingsByReport, { reportId }) || [];
+    const comments = useQuery(api.comments.getCommentsByReport, { reportId }) || [];
     const isAdmin = useQuery(api.users.isAdmin);
     const generateUploadUrl = useMutation(api.reports.generateUploadUrl);
     const updateFinalAttachment = useMutation(api.reports.updateFinalAttachment);
     const toggleReportApproval = useMutation(api.reports.toggleReportApproval);
+    const createComment = useMutation(api.comments.createComment);
     const [isUploading, setIsUploading] = useState(false);
     const [isTogglingApproval, setIsTogglingApproval] = useState(false);
+    const [commentContent, setCommentContent] = useState('');
+    const [isSendingComment, setIsSendingComment] = useState(false);
+    const [activeTab, setActiveTab] = useState('overview');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
 
     const handleFinalAttachmentUpload = async (file: File) => {
         setIsUploading(true);
@@ -90,6 +108,48 @@ export default function ReportDetails({
             setIsTogglingApproval(false);
         }
     };
+
+    const handleSendComment = async () => {
+        if (!commentContent.trim()) {
+            return;
+        }
+        setIsSendingComment(true);
+        try {
+            await createComment({
+                reportId,
+                content: commentContent.trim(),
+            });
+            setCommentContent('');
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Error sending comment.');
+            console.error(error);
+        } finally {
+            setIsSendingComment(false);
+        }
+    };
+
+    // Scroll to bottom when comments tab is opened or when new comments are added
+    useEffect(() => {
+        if (activeTab === 'comments') {
+            // Use setTimeout to ensure the DOM is updated
+            setTimeout(() => {
+                // Try to find the ScrollArea viewport and scroll it
+                const scrollArea = scrollAreaRef.current;
+                if (scrollArea) {
+                    const viewport = scrollArea.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement;
+                    if (viewport) {
+                        viewport.scrollTo({
+                            top: viewport.scrollHeight,
+                            behavior: 'smooth'
+                        });
+                    }
+                } else {
+                    // Fallback to scrollIntoView
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 150);
+        }
+    }, [activeTab, comments.length]);
 
     return (
         <div className="flex flex-col gap-4">
@@ -246,11 +306,12 @@ export default function ReportDetails({
                     </Card>
                 </CardContent>
             </Card>
-            <Tabs defaultValue="overview">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="flex flex-row gap-2 bg-background rounded-lg border mb-2">
                     <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground cursor-pointer">Overview</TabsTrigger>
                     <TabsTrigger value="findings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground cursor-pointer">Findings & Recommendations</TabsTrigger>
                     <TabsTrigger value="attachments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground cursor-pointer">Attachments</TabsTrigger>
+                    <TabsTrigger value="comments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground cursor-pointer">Comments</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview">
                     <div className="grid grid-cols-3 gap-4">
@@ -273,6 +334,23 @@ export default function ReportDetails({
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="grid gap-4">
+                                {report?.currentStatus && (
+                                    <div className="flex flex-col gap-2">
+                                        <p className="text-sm font-medium">Overall Status</p>
+                                        <Badge
+                                            variant="outline"
+                                            className={
+                                                report.currentStatus === 'On Track'
+                                                    ? 'rounded-full border-green-600 bg-green-600/10 text-green-800 focus-visible:ring-green-600/20 focus-visible:outline-none dark:bg-green-400/10 dark:text-green-400 dark:focus-visible:ring-green-400/40 [a&]:hover:bg-green-600/5 dark:[a&]:hover:bg-green-400/5 w-fit'
+                                                    : report.currentStatus === 'Minor Issues'
+                                                        ? 'rounded-full border-yellow-600 bg-yellow-600/10 text-yellow-800 focus-visible:ring-yellow-600/20 focus-visible:outline-none dark:bg-yellow-400/10 dark:text-yellow-400 dark:focus-visible:ring-yellow-400/40 [a&]:hover:bg-yellow-600/5 dark:[a&]:hover:bg-yellow-400/5 w-fit'
+                                                        : 'rounded-full border-red-600 bg-red-600/10 text-red-800 focus-visible:ring-red-600/20 focus-visible:outline-none dark:bg-red-400/10 dark:text-red-400 dark:focus-visible:ring-red-400/40 [a&]:hover:bg-red-600/5 dark:[a&]:hover:bg-red-400/5 w-fit'
+                                            }
+                                        >
+                                            {report.currentStatus}
+                                        </Badge>
+                                    </div>
+                                )}
                                 {report?.teamPerformance && (
                                     <div className="flex flex-col gap-2">
                                         <p className="text-sm font-medium">Team Performance</p>
@@ -606,6 +684,80 @@ export default function ReportDetails({
                                         Accepted formats: PDF, DOC, DOCX
                                     </p>
                                 </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="comments">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Comments</CardTitle>
+                            <CardDescription>
+                                Discuss this report with your peers and admins
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4">
+                            <ScrollArea className="h-[200px] pr-4" ref={scrollAreaRef}>
+                                <div className="flex min-h-[200px] flex-col space-y-4">
+                                    {comments.length === 0 ? (
+                                        <div className="flex flex-1 items-center justify-center">
+                                            <div className="flex flex-col items-center justify-center gap-2 text-center">
+                                                <CircleAlert className="size-8 text-muted-foreground" />
+                                                <span className="text-sm text-muted-foreground">No comments yet. Start the conversation!</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        comments.map((comment) => (
+                                            <div key={comment._id} className="flex gap-3">
+                                                <Avatar className="size-8">
+                                                    <AvatarImage src={comment.author?.imageUrl} alt={comment.author?.name} />
+                                                    <AvatarFallback className="text-xs">
+                                                        {comment.author?.name?.charAt(0) || 'U'}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-semibold">{comment.author?.name || 'Unknown User'}</p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {formatDateTime(comment._creationTime)}
+                                                        </p>
+                                                    </div>
+                                                    <p className="text-sm text-foreground whitespace-pre-wrap break-all">
+                                                        {comment.content}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                    <div ref={messagesEndRef} />
+                                </div>
+                            </ScrollArea>
+                            <div className="pt-4 border-t">
+                                <div className="flex gap-2">
+                                    <Textarea
+                                        placeholder="Type your message..."
+                                        value={commentContent}
+                                        onChange={(e) => setCommentContent(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendComment();
+                                            }
+                                        }}
+                                        className="flex-1 min-h-[30px] resize-none"
+                                        disabled={isSendingComment}
+                                    />
+                                    <Button
+                                        onClick={handleSendComment}
+                                        disabled={!commentContent.trim() || isSendingComment}
+                                        className="self-end cursor-pointer"
+                                    >
+                                        <SendIcon className="size-4" />
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    Press Enter to send, Shift+Enter for new line
+                                </p>
                             </div>
                         </CardContent>
                     </Card>

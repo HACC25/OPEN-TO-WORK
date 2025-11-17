@@ -27,7 +27,7 @@ export const createProject = mutation({
         if (user.role !== 'admin') {
             throw new Error('User is not authorized to create projects');
         }
-        return ctx.db.insert('projects', {
+        const projectId = await ctx.db.insert('projects', {
             projectName: args.projectName.trim(),
             projectDescription: args.projectDescription.trim(),
             sponsoringAgency: args.sponsoringAgency.trim(),
@@ -40,7 +40,12 @@ export const createProject = mutation({
             active: args.active,
             vendorName: args.vendorName?.trim() === '' ? undefined : args.vendorName?.trim(),
             updatedAt: Date.now(),
-        })
+        });
+        await ctx.db.insert('log', {
+            action: 'creation',
+            description: `Project "${args.projectName.trim()}" created by ${user.name}`,
+        });
+        return projectId;
     }
 });
 
@@ -72,7 +77,7 @@ export const updateProject = mutation({
         if (!project) {
             throw new Error('Project not found in database');
         }
-        return ctx.db.patch(project._id, {
+        await ctx.db.patch(project._id, {
             projectName: args.projectName.trim(),
             projectDescription: args.projectDescription.trim(),
             sponsoringAgency: args.sponsoringAgency.trim(),
@@ -85,7 +90,12 @@ export const updateProject = mutation({
             active: args.active,
             vendorName: args.vendorName?.trim() === '' ? undefined : args.vendorName?.trim(),
             updatedAt: Date.now(),
-        })
+        });
+        await ctx.db.insert('log', {
+            action: 'update',
+            description: `Project "${args.projectName.trim()}" updated by ${user.name}`,
+        });
+        return project._id;
     }
 });
 
@@ -137,14 +147,15 @@ export const getProjectReports = query({
         projectId: v.id('projects'),
     },
     handler: async (ctx, args) => {
-        const reports = await ctx.db.query('reports').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
-        return await Promise.all(reports.map(async (report) => {
-            const findings = await ctx.db.query('findings').withIndex('by_report_id', q => q.eq('reportId', report._id)).collect();
+        const report = await ctx.db.query('reports').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
+        const reportWithFindings = await Promise.all(report.map(async (r) => {
+            const findings = await ctx.db.query('findings').withIndex('by_report_id', q => q.eq('reportId', r._id)).collect();
             return {
-                ...report,
+                ...r,
                 findings,
             };
         }));
+        return reportWithFindings.sort((a, b) => b.year + b.month - (a.year + a.month));
     }
 });
 
@@ -177,10 +188,15 @@ export const addProjectMember = mutation({
         if (projectMember) {
             throw new Error('User is already a member of this project');
         }
-        return ctx.db.insert('projectMembers', {
+        const projectMemberId = await ctx.db.insert('projectMembers', {
             projectId: args.projectId,
             userId: args.userId,
-        })
+        });
+        await ctx.db.insert('log', {
+            action: 'creation',
+            description: `Project member added to project by ${user.name}`,
+        });
+        return projectMemberId;
     }
 });
 
@@ -205,7 +221,12 @@ export const removeProjectMember = mutation({
         if (!projectMember) {
             throw new Error('Project member not found in database');
         }
-        return ctx.db.delete(projectMember._id);
+        await ctx.db.delete(projectMember._id);
+        await ctx.db.insert('log', {
+            action: 'deletion',
+            description: `Project member removed from project by ${user.name}`,
+        });
+        return projectMember._id;
     }
 });
 
@@ -221,9 +242,16 @@ export const deleteProject = mutation({
         const projectMembers = await ctx.db.query('projectMembers').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
         const reports = await ctx.db.query('reports').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
         const findings = await ctx.db.query('findings').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
+        const comments = await ctx.db.query('comments').withIndex('by_project_id', q => q.eq('projectId', args.projectId)).collect();
         await Promise.all(projectMembers.map(pm => ctx.db.delete(pm._id)));
         await Promise.all(reports.map(r => ctx.db.delete(r._id)));
         await Promise.all(findings.map(f => ctx.db.delete(f._id)));
-        return ctx.db.delete(project._id);
+        await Promise.all(comments.map(c => ctx.db.delete(c._id)));
+        await ctx.db.delete(project._id);
+        await ctx.db.insert('log', {
+            action: 'deletion',
+            description: `Project "${project.projectName}" and all associated reports, findings, and comments deleted`,
+        });
+        return project._id;
     }
 });
