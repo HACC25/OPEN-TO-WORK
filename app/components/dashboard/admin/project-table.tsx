@@ -202,25 +202,25 @@ export default function ProjectTable() {
                             <p>View Project</p>
                         </TooltipContent>
                     </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <ProjectUserDialog projectId={row.original._id} />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Assoicated Users</p>
-                        </TooltipContent>
-                    </Tooltip>
+                    <ProjectUserDialog projectId={row.original._id} />
                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button
-                                variant='ghost'
-                                size='icon'
-                                className='cursor-pointer'
-                                disabled={deletingProjectId === row.original._id}
-                            >
-                                <Trash2Icon className='size-4' />
-                            </Button>
-                        </AlertDialogTrigger>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <AlertDialogTrigger asChild>
+                                    <Button
+                                        variant='ghost'
+                                        size='icon'
+                                        className='cursor-pointer'
+                                        disabled={deletingProjectId === row.original._id}
+                                    >
+                                        <Trash2Icon className='size-4' />
+                                    </Button>
+                                </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Delete project</p>
+                            </TooltipContent>
+                        </Tooltip>
                         <AlertDialogContent>
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Delete project</AlertDialogTitle>
