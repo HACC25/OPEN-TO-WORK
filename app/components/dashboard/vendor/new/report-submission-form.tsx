@@ -171,33 +171,39 @@ export default function ReportSubmissionForm() {
     async function onSubmit(data: FormValues) {
         setIsLoading(true);
         toast.info('Creating report...');
-        const reportId = await createReport({
-            projectId: data.projectId,
-            draft: data.draft,
-            attachmentId: data.attachmentId,
-            month: data.month,
-            year: data.year,
-            currentStatus: data.currentStatus,
-            teamPerformance: data.teamPerformance,
-            projectManagement: data.projectManagement,
-            technicalReadiness: data.technicalReadiness,
-            summary: data.summary,
-            accomplishments: data.accomplishments,
-            challenges: data.challenges,
-            upcomingMilestones: data.upcomingMilestones,
-            budgetStatus: data.budgetStatus,
-            scheduleStatus: data.scheduleStatus,
-            riskSummary: data.riskSummary,
-            findings: findings,
-        });
-        if (reportId) {
-            localStorage.removeItem(DRAFT_STORAGE_KEY);
-            toast.success('Report created successfully.');
-            router.push('/dashboard/');
-        } else {
-            toast.error('Error creating report.');
+        try {
+            const reportId = await createReport({
+                projectId: data.projectId,
+                draft: data.draft,
+                attachmentId: data.attachmentId,
+                month: data.month,
+                year: data.year,
+                currentStatus: data.currentStatus,
+                teamPerformance: data.teamPerformance,
+                projectManagement: data.projectManagement,
+                technicalReadiness: data.technicalReadiness,
+                summary: data.summary,
+                accomplishments: data.accomplishments,
+                challenges: data.challenges,
+                upcomingMilestones: data.upcomingMilestones,
+                budgetStatus: data.budgetStatus,
+                scheduleStatus: data.scheduleStatus,
+                riskSummary: data.riskSummary,
+                findings: findings,
+            });
+            if (reportId) {
+                localStorage.removeItem(DRAFT_STORAGE_KEY);
+                toast.success('Report created successfully.');
+                router.push('/dashboard/');
+            } else {
+                toast.error('Error creating report.');
+            }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (e) {
+            toast.error('A report with the same month and year already exists for this project. Please try a different month and year.');
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     }
 
     async function uploadAttachment(file: File) {

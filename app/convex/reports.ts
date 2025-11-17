@@ -41,6 +41,11 @@ export const createReport = mutation({
         if (user.role !== 'vendor') {
             throw new Error('User is not authorized to create report');
         }
+        const existingReport = await ctx.db.query('reports').withIndex('by_month_year_project', q => q.eq('month', args.month).eq('year', args.year).eq('projectId', args.projectId)).first();
+        if (existingReport) {
+            throw new Error('Report for this month and year already exists');
+        }
+
         const { findings, ...reportData } = args;
         const reportId = await ctx.db.insert('reports', {
             ...reportData,
