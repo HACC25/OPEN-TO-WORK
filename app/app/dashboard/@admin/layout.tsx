@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/dashboard/app-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
+import { AppSidebarContent } from "@/components/dashboard/app-sidebar-content"
 import { CSSProperties } from "react"
 
 export default function AdminLayout({
@@ -18,8 +19,10 @@ export default function AdminLayout({
                     } as CSSProperties
                 }
             >
-                <AppSidebar />
-                {children}
+                <AppSidebar role='admin' />
+                <AppSidebarContent>
+                    {children}
+                </AppSidebarContent>
             </SidebarProvider>
         </div>
     )

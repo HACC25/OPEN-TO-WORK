@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Image3D } from "@/components/landing/card3d";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
 
 export const Hero = () => {
     return (
@@ -17,14 +18,32 @@ export const Hero = () => {
                 <p className="mb-8 text-muted-foreground">
                     No more manual PDFs or inconsistent templates.
                 </p>
-                <div className="justify-center">
-                    <Button
-                        className="px-6 py-5 cursor-pointer"
-                        asChild
-                    >
-                        <Link href="/dashboard">Get Started</Link>
-                    </Button>
+                <div className="flex justify-center gap-3">
+                    <SignedOut>
+                        <Button
+                            className="px-6 py-5 cursor-pointer"
+                            asChild
+                        >
+                            <Link href="/dashboard">Get Started</Link>
+                        </Button>
+                    </SignedOut>
+                    <SignedIn>
+                        <Button
+                            className="px-6 py-5 cursor-pointer"
+                            asChild
+                        >
+                            <Link href="/dashboard">Go to Dashboard</Link>
+                        </Button>
+                        <Button
+                            className="px-6 py-5 cursor-pointer border-primary text-primary hover:text-primary hover:bg-primary/10"
+                            variant="outline"
+                            asChild
+                        >
+                            <Link href="/dashboard/new">Post a new project</Link>
+                        </Button>
+                    </SignedIn>
                 </div>
+
                 <div className="flex justify-center mt-8 mb-12">
                     <Image3D
                         src="/landing/dashboard-overview.png"

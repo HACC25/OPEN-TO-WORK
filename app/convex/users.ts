@@ -1,4 +1,4 @@
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const createUser = internalMutation({
@@ -15,25 +15,34 @@ export const createUser = internalMutation({
             args.email_addresses[0]?.email_address;
         const existingUser = await ctx.db.query('users').withIndex('by_email', q => q.eq('email', primaryEmail)).first();
         if (existingUser) {
-            return ctx.db.patch(existingUser._id, {
+            await ctx.db.patch(existingUser._id, {
                 clerkId: args.clerkId,
                 name: args.name,
                 imageUrl: args.imageUrl,
-                role: 'user',
+                role: 'vendor',
                 isActive: true,
                 updatedAt: Date.now(),
-            })
+            });
+            await ctx.db.insert('log', {
+                action: 'update',
+                description: `User "${args.name}" updated from "${existingUser.name}"`,
+            });
+            return existingUser._id;
         }
-        return ctx.db.insert('users', {
+        const userId = await ctx.db.insert('users', {
             clerkId: args.clerkId,
             email: primaryEmail,
             name: args.name,
             imageUrl: args.imageUrl,
-            role: 'user',
+            role: 'vendor',
             isActive: true,
-            createdAt: Date.now(),
             updatedAt: Date.now(),
-        })
+        });
+        await ctx.db.insert('log', {
+            action: 'creation',
+            description: `User "${args.name}" created`,
+        });
+        return userId;
     }
 });
 
@@ -51,24 +60,32 @@ export const updateUser = internalMutation({
             args.email_addresses[0]?.email_address;
         const user = await ctx.db.query('users').withIndex('by_clerk_id', q => q.eq('clerkId', args.clerkId)).first();
         if (!user) {
-            return ctx.db.insert('users', {
+            const userId = await ctx.db.insert('users', {
                 clerkId: args.clerkId,
                 email: primaryEmail,
                 name: args.name,
                 imageUrl: args.imageUrl,
-                role: 'user',
+                role: 'vendor',
                 isActive: true,
-                createdAt: Date.now(),
                 updatedAt: Date.now(),
-            })
+            });
+            await ctx.db.insert('log', {
+                action: 'creation',
+                description: `User "${args.name}" created`,
+            });
+            return userId;
         }
-        return ctx.db.patch(user._id, {
+        await ctx.db.patch(user._id, {
             email: primaryEmail,
-            role: 'user',
             name: args.name,
             imageUrl: args.imageUrl,
             updatedAt: Date.now(),
-        })
+        });
+        await ctx.db.insert('log', {
+            action: 'update',
+            description: `User "${args.name}" updated from "${user.name}"`,
+        });
+        return user._id;
     }
 });
 
@@ -79,22 +96,105 @@ export const deleteUser = internalMutation({
         if (!user) {
             return;
         }
-        return ctx.db.patch(user._id, {
+        await ctx.db.patch(user._id, {
             role: 'user',
             isActive: false,
             updatedAt: Date.now(),
         });
+        await ctx.db.insert('log', {
+            action: 'deletion',
+            description: `User "${user.name}" deactivated`,
+        });
+        return user._id;
     }
 });
 
 export const isAdmin = query(async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-        console.log('No identity found');
         return false;
     }
     const user = await ctx.db.query('users').withIndex('by_clerk_id', q => q.eq('clerkId', identity.subject)).first();
-    console.log('=====')
-    console.log(user?.role === 'admin');
     return user?.role === 'admin';
+});
+
+export const getUserById = query({
+    args: { userId: v.id('users') },
+    handler: async (ctx, args) => {
+        return await ctx.db.get(args.userId);
+    }
+});
+
+export const getUsers = query({
+    args: {
+        searchString: v.string(),
+        role: v.optional(v.union(v.literal('admin'), v.literal('user'), v.literal('vendor'))),
+        excludeRole: v.optional(v.union(v.literal('admin'), v.literal('user'), v.literal('vendor'))),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error('User not authenticated');
+        }
+        const user = await ctx.db.query('users').withIndex('by_clerk_id', q => q.eq('clerkId', identity.subject)).first();
+        if (!user) {
+            throw new Error('User not found in database');
+        }
+        const searchString = args.searchString.toLowerCase().trim();
+        if (searchString === '') {
+            if (args.role) {
+                const role: 'admin' | 'user' | 'vendor' = args.role;
+                return (await ctx.db
+                    .query('users')
+                    .withIndex('by_role', q => q.eq('role', role))
+                    .collect());
+            }
+            if (args.excludeRole) {
+                const excludeRole: 'admin' | 'user' | 'vendor' = args.excludeRole;
+                return (await ctx.db
+                    .query('users')
+                    .collect())
+                    .filter(user => user.role !== excludeRole);
+            }
+            return await ctx.db.query('users').collect();
+        }
+        const users = (await ctx.db.query('users').collect()).filter(user => {
+            const matchesText = user.name.toLowerCase().includes(searchString) || user.email.toLowerCase().includes(searchString);
+            const matchesRole = args.role ? user.role === args.role : true;
+            return matchesText && matchesRole;
+        });
+        return users;
+    }
+});
+
+export const updateUserMetadata = mutation({
+    args: {
+        _id: v.id('users'),
+        isActive: v.boolean(),
+        role: v.union(v.literal('admin'), v.literal('user'), v.literal('vendor')),
+    },
+    async handler(ctx, args) {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error('User not authenticated');
+        }
+        const user = await ctx.db
+            .query('users')
+            .withIndex('by_clerk_id', q => q.eq('clerkId', identity.subject))
+            .first();
+        if (!user) {
+            throw new Error('User not found in database');
+        }
+        const targetUser = await ctx.db.get(args._id);
+        await ctx.db.patch(args._id, {
+            isActive: args.isActive,
+            role: args.role,
+            updatedAt: Date.now(),
+        });
+        await ctx.db.insert('log', {
+            action: 'update',
+            description: `User metadata updated for "${targetUser?.name || 'unknown'}" by ${user.name}`,
+        });
+        return args._id;
+    }
 });

@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
 
@@ -45,10 +46,26 @@ http.route({
                 })
                 return new Response('User deleted', { status: 200 })
             default:
-                console.log('Ignored Clerk webhook event:', type)
                 return new Response('Ignored Clerk webhook event', { status: 400 })
         }
     }),
 });
+
+http.route({
+    path: "/file",
+    method: "GET",
+    handler: httpAction(async (ctx, request) => {
+        const { searchParams } = new URL(request.url);
+        const storageId = searchParams.get("id")! as Id<"_storage">;
+        const blob = await ctx.storage.get(storageId);
+        if (blob === null) {
+            return new Response("File not found", {
+                status: 404,
+            });
+        }
+        return new Response(blob);
+    }),
+});
+
 
 export default http;
