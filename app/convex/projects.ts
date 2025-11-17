@@ -255,3 +255,25 @@ export const deleteProject = mutation({
         return project._id;
     }
 });
+
+export const getInfoForApi = query({
+    handler: async (ctx) => {
+        const projects = await ctx.db.query('projects').collect();
+        const projectWithReports = await Promise.all(projects.map(async (project) => {
+            const reports = await ctx.db.query('reports').withIndex('by_project_id', q => q.eq('projectId', project._id)).collect();
+            const approvedReports = reports.filter(report => report.aproved);
+            const reportsWithFindings = await Promise.all(approvedReports.map(async (report) => {
+                const findings = await ctx.db.query('findings').withIndex('by_report_id', q => q.eq('reportId', report._id)).collect();
+                return {
+                    ...report,
+                    findings,
+                };
+            }));
+            return {
+                project,
+                reports: reportsWithFindings,
+            };
+        }));
+        return projectWithReports.sort((a, b) => b.project.updatedAt - a.project.updatedAt);
+    }
+});

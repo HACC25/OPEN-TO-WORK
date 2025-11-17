@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { FunctionArgs } from "convex/server";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import ReportFindingDialog from "@/components/dashboard/vendor/new/report-finding-dialog";
@@ -61,6 +61,27 @@ const FormSchema = z.object({
     riskSummary: z.string().optional(),
 });
 
+type FormValues = z.infer<typeof FormSchema>;
+
+const getDefaultFormValues = (): FormValues => ({
+    projectId: "" as Id<"projects">,
+    draft: false,
+    attachmentId: "" as Id<"_storage">,
+    month: 0,
+    year: 0,
+    currentStatus: "On Track",
+    teamPerformance: undefined,
+    projectManagement: undefined,
+    technicalReadiness: undefined,
+    summary: "",
+    accomplishments: undefined,
+    challenges: undefined,
+    upcomingMilestones: undefined,
+    budgetStatus: undefined,
+    scheduleStatus: undefined,
+    riskSummary: undefined,
+});
+
 export default function ReportSubmissionForm() {
     const projects = useQuery(api.projects.getProjects, {}) || [];
     const createReport = useMutation(api.reports.createReport);
@@ -86,27 +107,11 @@ export default function ReportSubmissionForm() {
         return [];
     });
 
-    const form = useForm<CreateReportArgument>({
+    const form = useForm<FormValues>({
         resolver: zodResolver(FormSchema),
-        defaultValues: {
-            projectId: "" as Id<"projects">,
-            draft: false,
-            attachmentId: "" as Id<"_storage">,
-            month: 0,
-            year: 0,
-            currentStatus: "On Track",
-            teamPerformance: undefined,
-            projectManagement: undefined,
-            technicalReadiness: undefined,
-            summary: "",
-            accomplishments: undefined,
-            challenges: undefined,
-            upcomingMilestones: undefined,
-            budgetStatus: undefined,
-            scheduleStatus: undefined,
-            riskSummary: undefined,
-        }
+        defaultValues: useMemo(() => getDefaultFormValues(), []),
     });
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const router = useRouter();
 
@@ -115,20 +120,10 @@ export default function ReportSubmissionForm() {
             const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
             if (savedDraft) {
                 const draftData = JSON.parse(savedDraft);
-                if (draftData.projectId) form.setValue('projectId', draftData.projectId);
-                if (draftData.month) form.setValue('month', draftData.month);
-                if (draftData.year) form.setValue('year', draftData.year);
-                if (draftData.currentStatus) form.setValue('currentStatus', draftData.currentStatus);
-                if (draftData.teamPerformance) form.setValue('teamPerformance', draftData.teamPerformance);
-                if (draftData.projectManagement) form.setValue('projectManagement', draftData.projectManagement);
-                if (draftData.technicalReadiness) form.setValue('technicalReadiness', draftData.technicalReadiness);
-                if (draftData.summary) form.setValue('summary', draftData.summary);
-                if (draftData.accomplishments) form.setValue('accomplishments', draftData.accomplishments);
-                if (draftData.challenges) form.setValue('challenges', draftData.challenges);
-                if (draftData.upcomingMilestones) form.setValue('upcomingMilestones', draftData.upcomingMilestones);
-                if (draftData.budgetStatus) form.setValue('budgetStatus', draftData.budgetStatus);
-                if (draftData.scheduleStatus) form.setValue('scheduleStatus', draftData.scheduleStatus);
-                if (draftData.riskSummary) form.setValue('riskSummary', draftData.riskSummary);
+                form.reset({
+                    ...getDefaultFormValues(),
+                    ...draftData,
+                });
             }
         } catch (error) {
             console.error('Error loading draft:', error);
@@ -165,29 +160,15 @@ export default function ReportSubmissionForm() {
     }
 
     function handleReset() {
-        form.reset({
-            projectId: "" as Id<"projects">,
-            draft: false,
-            attachmentId: "" as Id<"_storage">,
-            month: 0,
-            year: 0,
-            currentStatus: "On Track",
-            teamPerformance: undefined,
-            projectManagement: undefined,
-            technicalReadiness: undefined,
-            summary: "",
-            accomplishments: undefined,
-            challenges: undefined,
-            upcomingMilestones: undefined,
-            budgetStatus: undefined,
-            scheduleStatus: undefined,
-            riskSummary: undefined,
-        });
+        form.reset(getDefaultFormValues());
         setFindings([]);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
         localStorage.removeItem(DRAFT_STORAGE_KEY);
     }
 
-    async function onSubmit(data: CreateReportArgument) {
+    async function onSubmit(data: FormValues) {
         setIsLoading(true);
         toast.info('Creating report...');
         const reportId = await createReport({
@@ -434,7 +415,7 @@ export default function ReportSubmissionForm() {
                                 <FormItem className='space-y-2 sm:col-span-6'>
                                     <FormLabel>Overall Project Rating</FormLabel>
                                     <FormControl>
-                                        <RadioGroup className='w-full gap-2 flex flex-row' onValueChange={field.onChange} value={field.value}>
+                                        <RadioGroup className='w-full gap-2 flex flex-row' onValueChange={field.onChange} value={field.value ?? ""}>
                                             <Label
                                                 htmlFor='On Track'
                                                 className='cursor-pointer flex justify-center items-center gap-2 border-input has-data-[state=checked]:border-green-600/50 has-data-[state=checked]:bg-green-100/50 has-focus-visible:border-ring has-focus-visible:ring-ring/50 relative w-full rounded-md border p-3 shadow-xs transition-[color,box-shadow] outline-none has-focus-visible:ring-[3px]'
@@ -484,6 +465,7 @@ export default function ReportSubmissionForm() {
                                     <FormLabel>Upload Report</FormLabel>
                                     <FormControl>
                                         <Input
+                                            ref={fileInputRef}
                                             type='file'
                                             className='text-muted-foreground file:border-input file:text-foreground p-0 pr-3 italic file:mr-3 file:h-full file:border-0 file:border-r file:border-solid file:bg-transparent file:px-3 file:text-sm file:font-medium file:not-italic'
                                             onChange={async (event) => {
@@ -508,7 +490,7 @@ export default function ReportSubmissionForm() {
                                 <FormItem className='space-y-2 sm:col-span-6'>
                                     <FormLabel>Team Performance</FormLabel>
                                     <FormControl>
-                                        <RadioGroup className='w-full gap-2 flex flex-row' onValueChange={field.onChange} value={field.value}>
+                                        <RadioGroup className='w-full gap-2 flex flex-row' onValueChange={field.onChange} value={field.value ?? ""}>
                                             <Label
                                                 htmlFor='teamPerformance-On Track'
                                                 className='cursor-pointer flex justify-center items-center gap-2 border-input has-data-[state=checked]:border-green-600/50 has-data-[state=checked]:bg-green-100/50 has-focus-visible:border-ring has-focus-visible:ring-ring/50 relative w-full rounded-md border p-3 shadow-xs transition-[color,box-shadow] outline-none has-focus-visible:ring-[3px]'
@@ -557,7 +539,7 @@ export default function ReportSubmissionForm() {
                                 <FormItem className='space-y-2 sm:col-span-6'>
                                     <FormLabel>Project Management</FormLabel>
                                     <FormControl>
-                                        <RadioGroup className='w-full gap-2 flex flex-row' onValueChange={field.onChange} value={field.value}>
+                                        <RadioGroup className='w-full gap-2 flex flex-row' onValueChange={field.onChange} value={field.value ?? ""}>
                                             <Label
                                                 htmlFor='projectManagement-On Track'
                                                 className='cursor-pointer flex justify-center items-center gap-2 border-input has-data-[state=checked]:border-green-600/50 has-data-[state=checked]:bg-green-100/50 has-focus-visible:border-ring has-focus-visible:ring-ring/50 relative w-full rounded-md border p-3 shadow-xs transition-[color,box-shadow] outline-none has-focus-visible:ring-[3px]'
@@ -606,7 +588,7 @@ export default function ReportSubmissionForm() {
                                 <FormItem className='space-y-2 sm:col-span-6'>
                                     <FormLabel>Technical Readiness</FormLabel>
                                     <FormControl>
-                                        <RadioGroup className='w-full gap-2 flex flex-row' onValueChange={field.onChange} value={field.value}>
+                                        <RadioGroup className='w-full gap-2 flex flex-row' onValueChange={field.onChange} value={field.value ?? ""}>
                                             <Label
                                                 htmlFor='technicalReadiness-On Track'
                                                 className='cursor-pointer flex justify-center items-center gap-2 border-input has-data-[state=checked]:border-green-600/50 has-data-[state=checked]:bg-green-100/50 has-focus-visible:border-ring has-focus-visible:ring-ring/50 relative w-full rounded-md border p-3 shadow-xs transition-[color,box-shadow] outline-none has-focus-visible:ring-[3px]'
@@ -689,7 +671,12 @@ export default function ReportSubmissionForm() {
                             render={({ field }) => (
                                 <div className='flex flex-col gap-2 sm:col-span-6'>
                                     <Label>Key Accomplishments</Label>
-                                    <Textarea placeholder='Describe the key accomplishments of the month' value={field.value} onChange={field.onChange} className='min-h-[150px]' />
+                                    <Textarea
+                                        placeholder='Describe the key accomplishments of the month'
+                                        value={field.value ?? ""}
+                                        onChange={field.onChange}
+                                        className='min-h-[150px]'
+                                    />
                                 </div>
                             )}
                         />
@@ -699,7 +686,12 @@ export default function ReportSubmissionForm() {
                             render={({ field }) => (
                                 <div className='flex flex-col gap-2 sm:col-span-6'>
                                     <Label>Challenges & Issues</Label>
-                                    <Textarea placeholder='Describe the challenges and issues faced during the month' value={field.value} onChange={field.onChange} className='min-h-[150px]' />
+                                    <Textarea
+                                        placeholder='Describe the challenges and issues faced during the month'
+                                        value={field.value ?? ""}
+                                        onChange={field.onChange}
+                                        className='min-h-[150px]'
+                                    />
                                 </div>
                             )}
                         />
@@ -709,7 +701,12 @@ export default function ReportSubmissionForm() {
                             render={({ field }) => (
                                 <div className='flex flex-col gap-2 sm:col-span-6'>
                                     <Label>Upcoming Milestones</Label>
-                                    <Textarea placeholder='Describe the upcoming milestones for the next month' value={field.value} onChange={field.onChange} className='min-h-[150px]' />
+                                    <Textarea
+                                        placeholder='Describe the upcoming milestones for the next month'
+                                        value={field.value ?? ""}
+                                        onChange={field.onChange}
+                                        className='min-h-[150px]'
+                                    />
                                 </div>
                             )}
                         />
@@ -733,7 +730,12 @@ export default function ReportSubmissionForm() {
                                     <FormDescription>
                                         Current budget utilization and any variances
                                     </FormDescription>
-                                    <Textarea placeholder='Describe the current status of the budget' value={field.value} onChange={field.onChange} className='min-h-[100px]' />
+                                    <Textarea
+                                        placeholder='Describe the current status of the budget'
+                                        value={field.value ?? ""}
+                                        onChange={field.onChange}
+                                        className='min-h-[100px]'
+                                    />
                                 </div>
                             )}
                         />
@@ -746,7 +748,12 @@ export default function ReportSubmissionForm() {
                                     <FormDescription>
                                         Current timeline position and any delays
                                     </FormDescription>
-                                    <Textarea placeholder='Describe the current status of the schedule' value={field.value} onChange={field.onChange} className='min-h-[100px]' />
+                                    <Textarea
+                                        placeholder='Describe the current status of the schedule'
+                                        value={field.value ?? ""}
+                                        onChange={field.onChange}
+                                        className='min-h-[100px]'
+                                    />
                                 </div>
                             )}
                         />
@@ -759,7 +766,12 @@ export default function ReportSubmissionForm() {
                                     <FormDescription>
                                         Summarize key risks and mitigation strategies
                                     </FormDescription>
-                                    <Textarea placeholder='Describe the current risks and issues' value={field.value} onChange={field.onChange} className='min-h-[100px]' />
+                                    <Textarea
+                                        placeholder='Describe the current risks and issues'
+                                        value={field.value ?? ""}
+                                        onChange={field.onChange}
+                                        className='min-h-[100px]'
+                                    />
                                 </div>
                             )}
                         />

@@ -92,7 +92,7 @@ function formatTimeAgo(timestamp: number): string {
 export default function VendorDashboard() {
     const router = useRouter();
     const pendingReports = useQuery(api.reports.getVendorReportsPendingApproval) || [];
-    const commentsResult = useQuery(api.comments.getVendorComments, { paginationOpts: { numItems: 5, cursor: null } });
+    const commentsResult = useQuery(api.comments.getVendorComments, { paginationOpts: { numItems: 10, cursor: null } });
     const comments = commentsResult?.page || [];
 
     const pendingReportsTable = useReactTable({
@@ -151,12 +151,6 @@ export default function VendorDashboard() {
                         )}
                     </TableBody>
                 </Table>
-                <CardFooter className="flex flex-row items-center gap-2 justify-end">
-                    <Link href="/dashboard/projects" className="text-sm hover:underline hover:text-primary">
-                        View All Reports
-                    </Link>
-                    <ArrowRightIcon className="size-4.5 text-muted-foreground" />
-                </CardFooter>
             </Card>
             <Card className="col-span-5">
                 <CardHeader>
