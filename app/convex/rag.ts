@@ -12,7 +12,7 @@ const rag = new RAG(components.rag, {
 
 export const getAllReports = internalQuery({
     handler: async (ctx) => {
-        const reports = await ctx.db.query("reports").collect();
+        const reports = await ctx.db.query("reports").withIndex("by_approved", q => q.eq("aproved", true)).collect();
         const reportsWithCompleteInfo = await Promise.all(reports.map(async (report) => {
             const findings = await ctx.db.query('findings').withIndex('by_report_id', q => q.eq('reportId', report._id)).collect();
             const project = await ctx.db.get(report.projectId);
