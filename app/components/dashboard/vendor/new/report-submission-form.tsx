@@ -3,14 +3,14 @@
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckIcon, ChevronsUpDownIcon, TrashIcon } from "lucide-react";
+import { CheckIcon, ChevronsUpDownIcon, TrashIcon, SparklesIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { FunctionArgs } from "convex/server";
@@ -23,6 +23,7 @@ import ReportFindingDialog from "@/components/dashboard/vendor/new/report-findin
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import pdfToText from "react-pdftotext";
 
 const months = [
     { label: "January", value: 1 },
@@ -90,6 +91,9 @@ export default function ReportSubmissionForm() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isAutofilling, setIsAutofilling] = useState(false);
+    const getAIGeneratedReportFields = useAction(api.ai.getAIGeneratedReportFields);
     const [findings, setFindings] = useState<NonNullable<CreateReportArgument['findings']>>(() => {
         if (typeof window !== 'undefined') {
             try {
@@ -162,6 +166,7 @@ export default function ReportSubmissionForm() {
     function handleReset() {
         form.reset(getDefaultFormValues());
         setFindings([]);
+        setSelectedFile(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
@@ -198,7 +203,7 @@ export default function ReportSubmissionForm() {
             } else {
                 toast.error('Error creating report.');
             }
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (e) {
             toast.error('A report with the same month and year already exists for this project. Please try a different month and year.');
         } finally {
@@ -228,6 +233,78 @@ export default function ReportSubmissionForm() {
             toast.error('Error uploading attachment.');
         }
         setIsUploading(false);
+    }
+
+    async function handleAutofill() {
+        if (!selectedFile) {
+            toast.error('Please select a PDF file first.');
+            return;
+        }
+
+        setIsAutofilling(true);
+        toast.info('Extracting text from PDF...');
+
+        try {
+            // Extract text from PDF
+            const text = await pdfToText(selectedFile);
+
+            if (!text || text.trim().length === 0) {
+                toast.error('Could not extract text from PDF. Please ensure the PDF contains readable text.');
+                setIsAutofilling(false);
+                return;
+            }
+            console.log(text)
+
+            toast.info('Generating form fields with AI...');
+
+            // Call AI action to generate form fields
+            const aiResult = await getAIGeneratedReportFields({ content: text });
+
+            // Prefill form fields
+            if (aiResult.currentStatus) {
+                form.setValue('currentStatus', aiResult.currentStatus);
+            }
+            if (aiResult.teamPerformance) {
+                form.setValue('teamPerformance', aiResult.teamPerformance);
+            }
+            if (aiResult.projectManagement) {
+                form.setValue('projectManagement', aiResult.projectManagement);
+            }
+            if (aiResult.technicalReadiness) {
+                form.setValue('technicalReadiness', aiResult.technicalReadiness);
+            }
+            if (aiResult.summary) {
+                form.setValue('summary', aiResult.summary);
+            }
+            if (aiResult.accomplishments) {
+                form.setValue('accomplishments', aiResult.accomplishments);
+            }
+            if (aiResult.challenges) {
+                form.setValue('challenges', aiResult.challenges);
+            }
+            if (aiResult.upcomingMilestones) {
+                form.setValue('upcomingMilestones', aiResult.upcomingMilestones);
+            }
+            if (aiResult.budgetStatus) {
+                form.setValue('budgetStatus', aiResult.budgetStatus);
+            }
+            if (aiResult.scheduleStatus) {
+                form.setValue('scheduleStatus', aiResult.scheduleStatus);
+            }
+            if (aiResult.riskSummary) {
+                form.setValue('riskSummary', aiResult.riskSummary);
+            }
+            if (aiResult.findings && Array.isArray(aiResult.findings)) {
+                setFindings(aiResult.findings);
+            }
+
+            toast.success('Form fields autofilled successfully!');
+        } catch (error) {
+            console.error('Error during autofill:', error);
+            toast.error('Error during autofill. Please try again.');
+        } finally {
+            setIsAutofilling(false);
+        }
     }
 
     return (
@@ -470,19 +547,43 @@ export default function ReportSubmissionForm() {
                                 <FormItem className='space-y-2 sm:col-span-4'>
                                     <FormLabel>Upload Report</FormLabel>
                                     <FormControl>
-                                        <Input
-                                            ref={fileInputRef}
-                                            type='file'
-                                            className='text-muted-foreground file:border-input file:text-foreground p-0 pr-3 italic file:mr-3 file:h-full file:border-0 file:border-r file:border-solid file:bg-transparent file:px-3 file:text-sm file:font-medium file:not-italic'
-                                            onChange={async (event) => {
-                                                const file = event.target.files?.[0] ?? null;
-                                                if (file) {
-                                                    await uploadAttachment(file);
-                                                } else {
-                                                    form.setValue('attachmentId', "" as Id<"_storage">);
-                                                }
-                                            }}
-                                        />
+                                        <div className='flex gap-2'>
+                                            <Input
+                                                ref={fileInputRef}
+                                                type='file'
+                                                accept='application/pdf'
+                                                className='text-muted-foreground file:border-input file:text-foreground p-0 pr-3 italic file:mr-3 file:h-full file:border-0 file:border-r file:border-solid file:bg-transparent file:px-3 file:text-sm file:font-medium file:not-italic flex-1'
+                                                onChange={async (event) => {
+                                                    const file = event.target.files?.[0] ?? null;
+                                                    if (file) {
+                                                        if (file.type !== 'application/pdf') {
+                                                            toast.error('Only PDF files are allowed. Please select a PDF file.');
+                                                            if (fileInputRef.current) {
+                                                                fileInputRef.current.value = "";
+                                                            }
+                                                            form.setValue('attachmentId', "" as Id<"_storage">);
+                                                            setSelectedFile(null);
+                                                            return;
+                                                        }
+                                                        setSelectedFile(file);
+                                                        await uploadAttachment(file);
+                                                    } else {
+                                                        form.setValue('attachmentId', "" as Id<"_storage">);
+                                                        setSelectedFile(null);
+                                                    }
+                                                }}
+                                            />
+                                            <Button
+                                                type='button'
+                                                variant='outline'
+                                                onClick={handleAutofill}
+                                                disabled={!selectedFile || isAutofilling || isUploading}
+                                                className='shrink-0'
+                                            >
+                                                <SparklesIcon className='mr-2 h-4 w-4' />
+                                                {isAutofilling ? 'Autofilling...' : 'Autofill'}
+                                            </Button>
+                                        </div>
                                     </FormControl>
                                     <input type='hidden' value={field.value ?? ""} readOnly />
                                 </FormItem>
