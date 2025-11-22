@@ -55,7 +55,6 @@ type MenuItem = {
 
 const adminPagesItems: MenuItem[] = [
     { icon: Plus, label: "New Project", highlighted: true, href: "/dashboard/new" },
-    { icon: HomeIcon, label: "Home", href: "/" },
     { icon: ChartArea, label: "Dashboard", href: "/dashboard" },
     { icon: KanbanSquare, label: "Project Management", href: "/dashboard/projects" },
     { icon: User, label: "User Management", href: "/dashboard/users" },
@@ -75,7 +74,6 @@ const adminPagesItems: MenuItem[] = [
 
 const vendorPagesItems: MenuItem[] = [
     { icon: Plus, label: "Submit Report", highlighted: true, href: "/dashboard/new" },
-    { icon: HomeIcon, label: "Home", href: "/" },
     { icon: ChartArea, label: "Dashboard", href: "/dashboard" },
     { icon: User, label: "User Management", href: "/dashboard/users" },
     {
@@ -138,7 +136,7 @@ export function AppSidebar({ role = 'vendor', ...props }: React.ComponentProps<t
                 <SidebarMenu>
                     <SidebarMenuItem className={open ? "mt-3" : ""}>
                         <SidebarMenuButton size='lg' className='bg-transparent! [&>svg]:size-8' asChild>
-                            <Link href="/dashboard">
+                            <Link href="/">
                                 <Image src={open ? "/logo-text.svg" : "/logo.svg"} alt="logo" width={150} height={0} className='[&_rect]:fill-sidebar [&_rect:first-child]:fill-primary' />
                             </Link>
                         </SidebarMenuButton>
