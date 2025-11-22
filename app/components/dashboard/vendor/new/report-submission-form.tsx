@@ -344,7 +344,7 @@ export default function ReportSubmissionForm() {
                             name='projectId'
                             render={({ field }) => (
                                 <FormItem className='sm:col-span-2'>
-                                    <FormLabel>Select a project</FormLabel>
+                                    <FormLabel>Project</FormLabel>
                                     <Popover>
                                         <FormControl>
                                             <PopoverTrigger asChild>
@@ -396,7 +396,7 @@ export default function ReportSubmissionForm() {
                             name='month'
                             render={({ field }) => (
                                 <FormItem className='sm:col-span-2'>
-                                    <FormLabel>Select a month</FormLabel>
+                                    <FormLabel>Month</FormLabel>
                                     <Popover>
                                         <FormControl>
                                             <PopoverTrigger asChild>
@@ -446,7 +446,7 @@ export default function ReportSubmissionForm() {
                             name='year'
                             render={({ field }) => (
                                 <FormItem className='sm:col-span-2'>
-                                    <FormLabel>Select a year</FormLabel>
+                                    <FormLabel>Year</FormLabel>
                                     <Popover>
                                         <FormControl>
                                             <PopoverTrigger asChild>
