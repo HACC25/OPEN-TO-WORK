@@ -38,6 +38,9 @@ CONVEX_DEPLOYMENT=
 CONVEX_DEPLOY_KEY=
 NEXT_PUBLIC_CONVEX_URL=
 NEXT_PUBLIC_CONVEX_SITE_URL=
+
+# OpenAI
+OPENAI_API_KEY=
 ```
 
 Mirror `CLERK_JWT_ISSUER_DOMAIN` in the Convex dashboard so Convex auth matches Clerk, and include `CONVEX_DEPLOYMENT` / `CONVEX_DEPLOY_KEY` in the Vercel deployment environment.
